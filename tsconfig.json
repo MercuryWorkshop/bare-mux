@@ -1,0 +1,17 @@
+
+{
+	"compilerOptions": {
+		"outDir": "build",
+		"sourceMap": true,
+		"target": "ES2022",
+		"lib": ["DOM", "DOM.Iterable", "ES2019"],
+		"strict": true,
+		"stripInternal": true,
+		"module": "ES6",
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"noImplicitAny":false,
+		"declaration": true
+	},
+	"include": ["src"]
+}
