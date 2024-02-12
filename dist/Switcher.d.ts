@@ -17,10 +17,11 @@ declare global {
     }
 }
 declare class Switcher {
-    transports: Record<string, BareTransport>;
     active: BareTransport | null;
+    channel: BroadcastChannel;
+    constructor();
 }
 export declare function findSwitcher(): Switcher;
-export declare function AddTransport(name: string, client: BareTransport): void;
-export declare function SetTransport(name: string): void;
+export declare function SetTransport(name: string, ...config: any[]): void;
+export declare function SetSingletonTransport(client: BareTransport): void;
 export {};

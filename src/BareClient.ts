@@ -97,8 +97,8 @@ export class BareClient {
   createWebSocket(
     remote: string | URL,
     protocols: string | string[] | undefined = [],
-    options: BareWebSocket.Options,
-    origin: string,
+    webSocketImpl: WebSocketImpl,
+    requestHeaders: BareHeaders,
   ): WebSocket {
     let switcher = findSwitcher();
     let client = switcher.active;
@@ -133,7 +133,7 @@ export class BareClient {
         );
 
 
-    let wsImpl = (options.webSocketImpl || WebSocket) as WebSocketImpl;
+    let wsImpl = (webSocketImpl || WebSocket) as WebSocketImpl;
     const socket = new wsImpl("wss:null", protocols);
 
     let fakeProtocol = '';
@@ -148,26 +148,46 @@ export class BareClient {
         initialErrorHappened = true;
       }
     });
+    let initialOnErrorHappenned = false;
+    // TODO socket onerror will be broken
 
+    requestHeaders['Host'] = (new URL(remote)).host;
+    // requestHeaders['Origin'] = origin;
+    requestHeaders['Pragma'] = 'no-cache';
+    requestHeaders['Cache-Control'] = 'no-cache';
+    requestHeaders['Upgrade'] = 'websocket';
+    // requestHeaders['User-Agent'] = navigator.userAgent;
+    requestHeaders['Connection'] = 'Upgrade';
     const sendData = client.connect(
       remote,
       origin,
       protocols,
+      requestHeaders,
       (protocol: string) => {
         fakeReadyState = WebSocketFields.OPEN;
         fakeProtocol = protocol;
+
+        (socket as any).meta = {
+          headers: {
+            "sec-websocket-protocol": protocol,
+          }
+        }; // what the fuck is a meta
         socket.dispatchEvent(new Event("open"));
       },
       (payload) => {
-        if (typeof payload === "string") {
-          socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-        } else if (payload instanceof ArrayBuffer) {
-          Object.setPrototypeOf(payload, ArrayBuffer);
-
-          socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-        } else if (payload instanceof Blob) {
-          socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+        console.log(payload);
+        if ((payload as any).data) {
+          socket.dispatchEvent(new MessageEvent("message", { data: (payload as any).data }));
+          return;
         }
+        socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+        // if (typeof payload === "string") {
+        // } else if (payload instanceof ArrayBuffer) {
+        //   Object.setPrototypeOf(payload, ArrayBuffer);
+        //
+        //   socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+        // } else if (payload instanceof Blob) {
+        // }
       },
       (code, reason) => {
         fakeReadyState = WebSocketFields.CLOSED;
@@ -195,13 +215,6 @@ export class BareClient {
     //     // user is expected to specify user-agent and origin
     //     // both are in spec
     //
-    //     requestHeaders['Host'] = (remote as URL).host;
-    //     // requestHeaders['Origin'] = origin;
-    //     requestHeaders['Pragma'] = 'no-cache';
-    //     requestHeaders['Cache-Control'] = 'no-cache';
-    //     requestHeaders['Upgrade'] = 'websocket';
-    //     // requestHeaders['User-Agent'] = navigator.userAgent;
-    //     requestHeaders['Connection'] = 'Upgrade';
     //
     //     return requestHeaders;
     //   },
@@ -227,16 +240,13 @@ export class BareClient {
         : realReadyState;
     };
 
-    if (options.readyStateHook) options.readyStateHook(socket, getReadyState);
-    else {
-      // we have to hook .readyState ourselves
+    // we have to hook .readyState ourselves
 
-      Object.defineProperty(socket, 'readyState', {
-        get: getReadyState,
-        configurable: true,
-        enumerable: true,
-      });
-    }
+    Object.defineProperty(socket, 'readyState', {
+      get: getReadyState,
+      configurable: true,
+      enumerable: true,
+    });
 
     /**
      * @returns The error that should be thrown if send() were to be called on this socket according to the fake readyState value
@@ -250,36 +260,29 @@ export class BareClient {
         );
     };
 
-    if (options.sendErrorHook) options.sendErrorHook(socket, getSendError);
-    else {
-      // we have to hook .send ourselves
-      // use ...args to avoid giving the number of args a quantity
-      // no arguments will trip the following error: TypeError: Failed to execute 'send' on 'WebSocket': 1 argument required, but only 0 present.
-      socket.send = function(...args) {
-        const error = getSendError();
+    // we have to hook .send ourselves
+    // use ...args to avoid giving the number of args a quantity
+    // no arguments will trip the following error: TypeError: Failed to execute 'send' on 'WebSocket': 1 argument required, but only 0 present.
+    socket.send = function(...args) {
+      const error = getSendError();
 
-        if (error) throw error;
-        sendData(args[0] as any);
-      };
-    }
+      if (error) throw error;
+      sendData(args[0] as any);
+    };
 
-    if (options.urlHook) options.urlHook(socket, remote);
-    else
-      Object.defineProperty(socket, 'url', {
-        get: () => remote.toString(),
-        configurable: true,
-        enumerable: true,
-      });
+    Object.defineProperty(socket, 'url', {
+      get: () => remote.toString(),
+      configurable: true,
+      enumerable: true,
+    });
 
     const getProtocol = () => fakeProtocol;
 
-    if (options.protocolHook) options.protocolHook(socket, getProtocol);
-    else
-      Object.defineProperty(socket, 'protocol', {
-        get: getProtocol,
-        configurable: true,
-        enumerable: true,
-      });
+    Object.defineProperty(socket, 'protocol', {
+      get: getProtocol,
+      configurable: true,
+      enumerable: true,
+    });
 
     return socket;
   }
@@ -322,7 +325,7 @@ export class BareClient {
     }
 
     let switcher = findSwitcher();
-    if (!switcher.active) throw "invalid";
+    if (!switcher.active) throw "there are no bare clients";
     const client = switcher.active;
     if (!client.ready) await client.init();
 
@@ -341,7 +344,9 @@ export class BareClient {
 
       let responseobj: BareResponse & Partial<BareResponseFetch> = new Response(
         statusEmpty.includes(resp.status) ? undefined : resp.body, {
-        headers: new Headers(resp.headers as HeadersInit)
+        headers: new Headers(resp.headers as HeadersInit),
+        status: resp.status,
+        statusText: resp.statusText,
       }) as BareResponse;
       responseobj.rawHeaders = resp.headers;
       responseobj.rawResponse = new Response(resp.body);

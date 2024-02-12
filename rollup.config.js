@@ -45,7 +45,7 @@ const configs = [
     output: {
       file: `dist/bare.cjs`,
       format: 'umd',
-      name: 'bare',
+      name: 'BareMux',
       sourcemap: true,
       exports: 'auto',
     },

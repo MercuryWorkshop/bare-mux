@@ -1,7 +1,7 @@
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
   typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.bare = {}));
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.BareMux = {}));
 })(this, (function (exports) { 'use strict';
 
   const maxRedirects = 20;
@@ -22,25 +22,45 @@
       OPEN: WebSocket.OPEN,
   };
 
-  self.BCC_VERSION = "2.1.3";
+  self.BCC_VERSION = "3.0.2";
   console.warn("BCC_VERSION: " + self.BCC_VERSION);
-  if (!("gTransports" in globalThis)) {
-      globalThis.gTransports = {};
-  }
   class Switcher {
-      transports = {};
       active = null;
+      channel = new BroadcastChannel("bare-mux");
+      constructor() {
+          this.channel.addEventListener("message", ({ data: { type, data } }) => {
+              console.log(type, data, "ServiceWorker" in globalThis);
+              switch (type) {
+                  case "setremote":
+                      // this.active = new RemoteClient
+                      break;
+                  case "set":
+                      const { name, config } = data;
+                      this.active = new ((0, eval)(name))(...config);
+                      break;
+              }
+          });
+      }
   }
   function findSwitcher() {
       if (globalThis.gSwitcher)
           return globalThis.gSwitcher;
+      if ("ServiceWorkerGlobalScope" in globalThis) {
+          globalThis.gSwitcher = new Switcher;
+          return globalThis.gSwitcher;
+      }
+      let _parent = window;
       for (let i = 0; i < 20; i++) {
           try {
-              parent = parent.parent;
-              if (parent && parent["gSwitcher"]) {
+              if (_parent == _parent.parent) {
+                  globalThis.gSwitcher = new Switcher;
+                  return globalThis.gSwitcher;
+              }
+              _parent = _parent.parent;
+              if (_parent && _parent["gSwitcher"]) {
                   console.warn("found implementation on parent");
-                  globalThis.gSwitcher = parent["gSwitcher"];
-                  return parent["gSwitcher"];
+                  globalThis.gSwitcher = _parent["gSwitcher"];
+                  return _parent["gSwitcher"];
               }
           }
           catch (e) {
@@ -49,6 +69,17 @@
           }
       }
       throw "unreachable";
+  }
+  findSwitcher();
+  function SetTransport(name, ...config) {
+      let switcher = findSwitcher();
+      switcher.active = new ((0, eval)(name))(...config);
+      switcher.channel.postMessage({ type: "set", data: { name, config } });
+  }
+  function SetSingletonTransport(client) {
+      let switcher = findSwitcher();
+      switcher.active = client;
+      switcher.channel.postMessage({ type: "setremote" });
   }
 
   /*
@@ -75,7 +106,7 @@
        * Create a BareClient. Calls to fetch and connect will wait for an implementation to be ready.
        */
       constructor() { }
-      createWebSocket(remote, protocols = [], options, origin) {
+      createWebSocket(remote, protocols = [], webSocketImpl, requestHeaders) {
           let switcher = findSwitcher();
           let client = switcher.active;
           if (!client)
@@ -96,7 +127,7 @@
           for (const proto of protocols)
               if (!validProtocol(proto))
                   throw new DOMException(`Failed to construct 'WebSocket': The subprotocol '${proto}' is invalid.`);
-          let wsImpl = (options.webSocketImpl || WebSocket);
+          let wsImpl = (webSocketImpl || WebSocket);
           const socket = new wsImpl("wss:null", protocols);
           let fakeProtocol = '';
           let fakeReadyState = WebSocketFields.CONNECTING;
@@ -108,21 +139,37 @@
                   initialErrorHappened = true;
               }
           });
-          const sendData = client.connect(remote, origin, protocols, (protocol) => {
+          // TODO socket onerror will be broken
+          requestHeaders['Host'] = (new URL(remote)).host;
+          // requestHeaders['Origin'] = origin;
+          requestHeaders['Pragma'] = 'no-cache';
+          requestHeaders['Cache-Control'] = 'no-cache';
+          requestHeaders['Upgrade'] = 'websocket';
+          // requestHeaders['User-Agent'] = navigator.userAgent;
+          requestHeaders['Connection'] = 'Upgrade';
+          const sendData = client.connect(remote, origin, protocols, requestHeaders, (protocol) => {
               fakeReadyState = WebSocketFields.OPEN;
               fakeProtocol = protocol;
+              socket.meta = {
+                  headers: {
+                      "sec-websocket-protocol": protocol,
+                  }
+              }; // what the fuck is a meta
               socket.dispatchEvent(new Event("open"));
           }, (payload) => {
-              if (typeof payload === "string") {
-                  socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+              console.log(payload);
+              if (payload.data) {
+                  socket.dispatchEvent(new MessageEvent("message", { data: payload.data }));
+                  return;
               }
-              else if (payload instanceof ArrayBuffer) {
-                  Object.setPrototypeOf(payload, ArrayBuffer);
-                  socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-              }
-              else if (payload instanceof Blob) {
-                  socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-              }
+              socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+              // if (typeof payload === "string") {
+              // } else if (payload instanceof ArrayBuffer) {
+              //   Object.setPrototypeOf(payload, ArrayBuffer);
+              //
+              //   socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+              // } else if (payload instanceof Blob) {
+              // }
           }, (code, reason) => {
               fakeReadyState = WebSocketFields.CLOSED;
               socket.dispatchEvent(new CloseEvent("close", { code, reason }));
@@ -146,13 +193,6 @@
           //     // user is expected to specify user-agent and origin
           //     // both are in spec
           //
-          //     requestHeaders['Host'] = (remote as URL).host;
-          //     // requestHeaders['Origin'] = origin;
-          //     requestHeaders['Pragma'] = 'no-cache';
-          //     requestHeaders['Cache-Control'] = 'no-cache';
-          //     requestHeaders['Upgrade'] = 'websocket';
-          //     // requestHeaders['User-Agent'] = navigator.userAgent;
-          //     requestHeaders['Connection'] = 'Upgrade';
           //
           //     return requestHeaders;
           //   },
@@ -176,16 +216,12 @@
                   ? fakeReadyState
                   : realReadyState;
           };
-          if (options.readyStateHook)
-              options.readyStateHook(socket, getReadyState);
-          else {
-              // we have to hook .readyState ourselves
-              Object.defineProperty(socket, 'readyState', {
-                  get: getReadyState,
-                  configurable: true,
-                  enumerable: true,
-              });
-          }
+          // we have to hook .readyState ourselves
+          Object.defineProperty(socket, 'readyState', {
+              get: getReadyState,
+              configurable: true,
+              enumerable: true,
+          });
           /**
            * @returns The error that should be thrown if send() were to be called on this socket according to the fake readyState value
            */
@@ -194,36 +230,26 @@
               if (readyState === WebSocketFields.CONNECTING)
                   return new DOMException("Failed to execute 'send' on 'WebSocket': Still in CONNECTING state.");
           };
-          if (options.sendErrorHook)
-              options.sendErrorHook(socket, getSendError);
-          else {
-              // we have to hook .send ourselves
-              // use ...args to avoid giving the number of args a quantity
-              // no arguments will trip the following error: TypeError: Failed to execute 'send' on 'WebSocket': 1 argument required, but only 0 present.
-              socket.send = function (...args) {
-                  const error = getSendError();
-                  if (error)
-                      throw error;
-                  sendData(args[0]);
-              };
-          }
-          if (options.urlHook)
-              options.urlHook(socket, remote);
-          else
-              Object.defineProperty(socket, 'url', {
-                  get: () => remote.toString(),
-                  configurable: true,
-                  enumerable: true,
-              });
+          // we have to hook .send ourselves
+          // use ...args to avoid giving the number of args a quantity
+          // no arguments will trip the following error: TypeError: Failed to execute 'send' on 'WebSocket': 1 argument required, but only 0 present.
+          socket.send = function (...args) {
+              const error = getSendError();
+              if (error)
+                  throw error;
+              sendData(args[0]);
+          };
+          Object.defineProperty(socket, 'url', {
+              get: () => remote.toString(),
+              configurable: true,
+              enumerable: true,
+          });
           const getProtocol = () => fakeProtocol;
-          if (options.protocolHook)
-              options.protocolHook(socket, getProtocol);
-          else
-              Object.defineProperty(socket, 'protocol', {
-                  get: getProtocol,
-                  configurable: true,
-                  enumerable: true,
-              });
+          Object.defineProperty(socket, 'protocol', {
+              get: getProtocol,
+              configurable: true,
+              enumerable: true,
+          });
           return socket;
       }
       async fetch(url, init) {
@@ -248,7 +274,7 @@
           }
           let switcher = findSwitcher();
           if (!switcher.active)
-              throw "invalid";
+              throw "there are no bare clients";
           const client = switcher.active;
           if (!client.ready)
               await client.init();
@@ -259,7 +285,9 @@
                   headers.Host = urlO.host;
               let resp = await client.request(urlO, req.method, body, headers, req.signal);
               let responseobj = new Response(statusEmpty.includes(resp.status) ? undefined : resp.body, {
-                  headers: new Headers(resp.headers)
+                  headers: new Headers(resp.headers),
+                  status: resp.status,
+                  statusText: resp.statusText,
               });
               responseobj.rawHeaders = resp.headers;
               responseobj.rawResponse = new Response(resp.body);
@@ -290,8 +318,14 @@
   }
 
   exports.BareClient = BareClient;
+  exports.SetSingletonTransport = SetSingletonTransport;
+  exports.SetTransport = SetTransport;
   exports.WebSocketFields = WebSocketFields;
+  exports.default = BareClient;
+  exports.findSwitcher = findSwitcher;
   exports.maxRedirects = maxRedirects;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
 
 }));
 //# sourceMappingURL=bare.cjs.map

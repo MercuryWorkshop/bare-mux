@@ -20,6 +20,7 @@ export interface BareTransport {
     url: URL,
     origin: string,
     protocols: string[],
+    requestHeaders: BareHeaders,
     onopen: (protocol: string) => void,
     onmessage: (data: Blob | ArrayBuffer | string) => void,
     onclose: (code: number, reason: string) => void,
