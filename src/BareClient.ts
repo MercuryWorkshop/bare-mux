@@ -99,6 +99,7 @@ export class BareClient {
     protocols: string | string[] | undefined = [],
     webSocketImpl: WebSocketImpl,
     requestHeaders: BareHeaders,
+    arrayBufferImpl: typeof ArrayBuffer,
   ): WebSocket {
     let switcher = findSwitcher();
     let client = switcher.active;
@@ -148,9 +149,16 @@ export class BareClient {
         initialErrorHappened = true;
       }
     });
-    let initialOnErrorHappenned = false;
+    let initialCloseHappened = false;
+    socket.addEventListener("close", (e) => {
+      if (!initialCloseHappened) {
+        e.stopImmediatePropagation();
+        initialCloseHappened = true;
+      }
+    });
     // TODO socket onerror will be broken
 
+    arrayBufferImpl = arrayBufferImpl || webSocketImpl.constructor.constructor("return ArrayBuffer")().prototype;
     requestHeaders['Host'] = (new URL(remote)).host;
     // requestHeaders['Origin'] = origin;
     requestHeaders['Pragma'] = 'no-cache';
@@ -174,20 +182,25 @@ export class BareClient {
         }; // what the fuck is a meta
         socket.dispatchEvent(new Event("open"));
       },
-      (payload) => {
-        console.log(payload);
-        if ((payload as any).data) {
-          socket.dispatchEvent(new MessageEvent("message", { data: (payload as any).data }));
-          return;
+      async (payload) => {
+        if (typeof payload === "string") {
+          socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+        } else if ("byteLength" in payload) {
+          if (socket.binaryType === "blob") {
+            payload = new Blob([payload]);
+          } else {
+            Object.setPrototypeOf(payload, arrayBufferImpl);
+          }
+
+          socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+        } else if ("arrayBuffer" in payload) {
+          if (socket.binaryType === "arraybuffer") {
+            payload = await payload.arrayBuffer()
+            Object.setPrototypeOf(payload, arrayBufferImpl);
+          }
+
+          socket.dispatchEvent(new MessageEvent("message", { data: payload }));
         }
-        socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-        // if (typeof payload === "string") {
-        // } else if (payload instanceof ArrayBuffer) {
-        //   Object.setPrototypeOf(payload, ArrayBuffer);
-        //
-        //   socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-        // } else if (payload instanceof Blob) {
-        // }
       },
       (code, reason) => {
         fakeReadyState = WebSocketFields.CLOSED;

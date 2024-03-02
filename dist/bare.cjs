@@ -106,7 +106,7 @@
        * Create a BareClient. Calls to fetch and connect will wait for an implementation to be ready.
        */
       constructor() { }
-      createWebSocket(remote, protocols = [], webSocketImpl, requestHeaders) {
+      createWebSocket(remote, protocols = [], webSocketImpl, requestHeaders, arrayBufferImpl) {
           let switcher = findSwitcher();
           let client = switcher.active;
           if (!client)
@@ -139,7 +139,15 @@
                   initialErrorHappened = true;
               }
           });
+          let initialCloseHappened = false;
+          socket.addEventListener("close", (e) => {
+              if (!initialCloseHappened) {
+                  e.stopImmediatePropagation();
+                  initialCloseHappened = true;
+              }
+          });
           // TODO socket onerror will be broken
+          arrayBufferImpl = arrayBufferImpl || webSocketImpl.constructor.constructor("return ArrayBuffer")().prototype;
           requestHeaders['Host'] = (new URL(remote)).host;
           // requestHeaders['Origin'] = origin;
           requestHeaders['Pragma'] = 'no-cache';
@@ -156,20 +164,27 @@
                   }
               }; // what the fuck is a meta
               socket.dispatchEvent(new Event("open"));
-          }, (payload) => {
-              console.log(payload);
-              if (payload.data) {
-                  socket.dispatchEvent(new MessageEvent("message", { data: payload.data }));
-                  return;
+          }, async (payload) => {
+              if (typeof payload === "string") {
+                  socket.dispatchEvent(new MessageEvent("message", { data: payload }));
               }
-              socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-              // if (typeof payload === "string") {
-              // } else if (payload instanceof ArrayBuffer) {
-              //   Object.setPrototypeOf(payload, ArrayBuffer);
-              //
-              //   socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-              // } else if (payload instanceof Blob) {
-              // }
+              else if ("byteLength" in payload) {
+                  if (socket.binaryType === "blob") {
+                      payload = new Blob([payload]);
+                  }
+                  else {
+                      Object.setPrototypeOf(payload, arrayBufferImpl);
+                  }
+                  socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+              }
+              else if ("arrayBuffer" in payload) {
+                  if (socket.binaryType === "arraybuffer") {
+                      payload = await payload.arrayBuffer();
+                      Object.setPrototypeOf(payload, arrayBufferImpl);
+                      console.log(payload);
+                  }
+                  socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+              }
           }, (code, reason) => {
               fakeReadyState = WebSocketFields.CLOSED;
               socket.dispatchEvent(new CloseEvent("close", { code, reason }));

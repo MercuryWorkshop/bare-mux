@@ -56,6 +56,6 @@ export declare class BareClient {
      * Create a BareClient. Calls to fetch and connect will wait for an implementation to be ready.
      */
     constructor();
-    createWebSocket(remote: string | URL, protocols: string | string[] | undefined, webSocketImpl: WebSocketImpl, requestHeaders: BareHeaders): WebSocket;
+    createWebSocket(remote: string | URL, protocols: string | string[] | undefined, webSocketImpl: WebSocketImpl, requestHeaders: BareHeaders, arrayBufferImpl: typeof ArrayBuffer): WebSocket;
     fetch(url: string | URL, init?: RequestInit): Promise<BareResponseFetch>;
 }
