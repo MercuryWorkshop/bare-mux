@@ -1,8 +1,8 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-  typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.BareMux = {}));
-})(this, (function (exports) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('uuid')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'uuid'], factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.BareMux = {}, global.uuid));
+})(this, (function (exports, uuid) { 'use strict';
 
   const maxRedirects = 20;
 
@@ -22,7 +22,162 @@
       OPEN: WebSocket.OPEN,
   };
 
-  self.BCC_VERSION = "3.0.2";
+  /// <reference lib="WebWorker" />
+  function registerRemoteListener(channel) {
+      navigator.serviceWorker.addEventListener("message", async ({ data }) => {
+          if (data.type === "request") {
+              const { remote, method, body, headers } = data;
+              let response = await findSwitcher().active?.request(new URL(remote), method, body, headers, undefined);
+              let transferred = [];
+              if (response.body instanceof ArrayBuffer || response.body instanceof Blob || response.body instanceof ReadableStream) {
+                  transferred.push(response.body);
+              }
+              response.id = data.id;
+              response.type = "response";
+              channel.postMessage(response, transferred);
+          }
+      });
+  }
+  let remote;
+  if ("ServiceWorkerGlobalScope" in self) {
+      addEventListener("message", async ({ data }) => {
+          if (data.type === "response") {
+              let resolve = remote.promises.get(data.id);
+              if (resolve) {
+                  resolve(data);
+                  remote.promises.delete(data.id);
+              }
+          }
+      });
+  }
+  class RemoteTransport {
+      canstart = true;
+      ready = false;
+      promises = new Map();
+      constructor() {
+          if (!("ServiceWorkerGlobalScope" in self)) {
+              throw new TypeError("Attempt to construct RemoteClient from outside a service worker");
+          }
+      }
+      async init() {
+          remote = this;
+          this.ready = true;
+      }
+      async meta() { }
+      async request(remote, method, body, headers, signal) {
+          let id = uuid.v4();
+          const clients = await self.clients.matchAll();
+          if (clients.length < 1)
+              throw new Error("no available clients");
+          for (const client of clients) {
+              client.postMessage({
+                  type: "request",
+                  id,
+                  remote: remote.toString(),
+                  method,
+                  body,
+                  headers
+              });
+          }
+          return await new Promise((resolve, reject) => {
+              this.promises.set(id, resolve);
+          });
+      }
+      connect(url, origin, protocols, requestHeaders, onopen, onmessage, onclose, onerror) {
+          throw "why are you calling connect from remoteclient";
+      }
+  }
+  //
+  // declare const self: ServiceWorkerGlobalScope;
+  // export default class RemoteClient extends Client {
+  //   static singleton: RemoteClient;
+  //   private callbacks: Record<string, (message: Record<string, any>) => void> = {};
+  //
+  //   private uid = uuid();
+  //   constructor() {
+  //     if (RemoteClient.singleton) return RemoteClient.singleton;
+  //     super();
+  //     // this should be fine
+  //     // if (!("ServiceWorkerGlobalScope" in self)) {
+  //     //   throw new TypeError("Attempt to construct RemoteClient from outside a service worker")
+  //     // }
+  //
+  //     addEventListener("message", (event) => {
+  //       if (event.data.__remote_target === this.uid) {
+  //         const callback = this.callbacks[event.data.__remote_id];
+  //         callback(event.data.__remote_value);
+  //       }
+  //     });
+  //
+  //     RemoteClient.singleton = this;
+  //   }
+  //
+  //   async send(message: Record<string, any>, id?: string) {
+  //     const clients = await self.clients.matchAll();
+  //     if (clients.length < 1)
+  //       throw new Error("no available clients");
+  //
+  //     for (const client of clients) {
+  //       client.postMessage({
+  //         __remote_target: this.uid,
+  //         __remote_id: id,
+  //         __remote_value: message
+  //       })
+  //     }
+  //
+  //   }
+  //
+  //   async sendWithResponse(message: Record<string, any>): Promise<any> {
+  //     const id = uuid();
+  //     return new Promise((resolve) => {
+  //       this.callbacks[id] = resolve;
+  //       this.send(message, id);
+  //     });
+  //   }
+  //
+  //   connect(
+  //     ...args: any
+  //   ) {
+  //     throw "why are you calling connect from remoteclient"
+  //   }
+  //   async request(
+  //     method: BareMethod,
+  //     requestHeaders: BareHeaders,
+  //     body: BodyInit | null,
+  //     remote: URL,
+  //     cache: BareCache | undefined,
+  //     duplex: string | undefined,
+  //     signal: AbortSignal | undefined
+  //   ): Promise<BareResponse> {
+  //
+  //     const response = await this.sendWithResponse({
+  //       type: "request",
+  //       options: {
+  //         method,
+  //         requestHeaders,
+  //         body,
+  //         remote: remote.toString(),
+  //       },
+  //     });
+  //     // const readResponse = await this.readBareResponse(response);
+  //
+  //     const result: Response & Partial<BareResponse> = new Response(
+  //       statusEmpty.includes(response.status!) ? undefined : response.body,
+  //       {
+  //         status: response.status,
+  //         statusText: response.statusText ?? undefined,
+  //         headers: new Headers(response.headers as HeadersInit),
+  //       }
+  //     );
+  //
+  //     result.rawHeaders = response.rawHeaders;
+  //     result.rawResponse = response;
+  //
+  //     return result as BareResponse;
+  //   }
+  // }
+
+  self.BCC_VERSION = "3.0.4";
   console.warn("BCC_VERSION: " + self.BCC_VERSION);
   class Switcher {
       active = null;
@@ -32,7 +187,7 @@
               console.log(type, data, "ServiceWorker" in globalThis);
               switch (type) {
                   case "setremote":
-                      // this.active = new RemoteClient
+                      this.active = new RemoteTransport;
                       break;
                   case "set":
                       const { name, config } = data;
@@ -181,7 +336,6 @@
                   if (socket.binaryType === "arraybuffer") {
                       payload = await payload.arrayBuffer();
                       Object.setPrototypeOf(payload, arrayBufferImpl);
-                      console.log(payload);
                   }
                   socket.dispatchEvent(new MessageEvent("message", { data: payload }));
               }
@@ -339,6 +493,7 @@
   exports.default = BareClient;
   exports.findSwitcher = findSwitcher;
   exports.maxRedirects = maxRedirects;
+  exports.registerRemoteListener = registerRemoteListener;
 
   Object.defineProperty(exports, '__esModule', { value: true });
 

@@ -1,6 +1,7 @@
 import { BareTransport } from "./BareTypes";
+import RemoteTransport from "./RemoteClient";
 
-self.BCC_VERSION = "3.0.2";
+self.BCC_VERSION = "3.0.4";
 console.warn("BCC_VERSION: " + self.BCC_VERSION);
 
 declare global {
@@ -31,7 +32,7 @@ class Switcher {
       console.log(type, data, "ServiceWorker" in globalThis);
       switch (type) {
         case "setremote":
-          // this.active = new RemoteClient
+          this.active = new RemoteTransport
           break;
         case "set":
           const { name, config } = data;
