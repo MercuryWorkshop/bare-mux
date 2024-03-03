@@ -23,5 +23,5 @@ declare class Switcher {
 }
 export declare function findSwitcher(): Switcher;
 export declare function SetTransport(name: string, ...config: any[]): void;
-export declare function SetSingletonTransport(client: BareTransport): void;
+export declare function SetSingletonTransport(client: BareTransport): Promise<void>;
 export {};

@@ -340,7 +340,7 @@ export class BareClient {
     let switcher = findSwitcher();
     if (!switcher.active) throw "there are no bare clients";
     const client = switcher.active;
-    if (!client.ready) await client.init();
+    if (!client.ready) await (client as any).initpromise;
 
     for (let i = 0; ; i++) {
       if ('host' in headers) headers.host = urlO.host;

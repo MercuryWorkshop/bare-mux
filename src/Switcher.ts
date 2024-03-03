@@ -22,6 +22,11 @@ declare global {
   }
 }
 
+function initTransport(name: string, config: any) {
+  let cl = new ((0, eval)(name))(...config);
+  cl.initpromise = cl.init();
+  return cl;
+}
 class Switcher {
   active: BareTransport | null = null;
 
@@ -36,7 +41,7 @@ class Switcher {
           break;
         case "set":
           const { name, config } = data;
-          this.active = new ((0, eval)(name))(...config);
+          this.active = initTransport(name, config);
           break;
       }
     });
@@ -76,12 +81,13 @@ findSwitcher();
 
 export function SetTransport(name: string, ...config: any[]) {
   let switcher = findSwitcher();
-  switcher.active = new ((0, eval)(name))(...config);
+  switcher.active = initTransport(name, config);
   switcher.channel.postMessage({ type: "set", data: { name, config } });
 }
 
-export function SetSingletonTransport(client: BareTransport) {
+export async function SetSingletonTransport(client: BareTransport) {
   let switcher = findSwitcher();
+  await client.init();
   switcher.active = client;
   switcher.channel.postMessage({ type: "setremote" });
 }

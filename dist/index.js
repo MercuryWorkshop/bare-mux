@@ -175,6 +175,11 @@ class RemoteTransport {
 
 self.BCC_VERSION = "3.0.4";
 console.warn("BCC_VERSION: " + self.BCC_VERSION);
+function initTransport(name, config) {
+    let cl = new ((0, eval)(name))(...config);
+    cl.initpromise = cl.init();
+    return cl;
+}
 class Switcher {
     active = null;
     channel = new BroadcastChannel("bare-mux");
@@ -187,7 +192,7 @@ class Switcher {
                     break;
                 case "set":
                     const { name, config } = data;
-                    this.active = new ((0, eval)(name))(...config);
+                    this.active = initTransport(name, config);
                     break;
             }
         });
@@ -224,11 +229,12 @@ function findSwitcher() {
 findSwitcher();
 function SetTransport(name, ...config) {
     let switcher = findSwitcher();
-    switcher.active = new ((0, eval)(name))(...config);
+    switcher.active = initTransport(name, config);
     switcher.channel.postMessage({ type: "set", data: { name, config } });
 }
-function SetSingletonTransport(client) {
+async function SetSingletonTransport(client) {
     let switcher = findSwitcher();
+    await client.init();
     switcher.active = client;
     switcher.channel.postMessage({ type: "setremote" });
 }
@@ -442,7 +448,7 @@ class BareClient {
             throw "there are no bare clients";
         const client = switcher.active;
         if (!client.ready)
-            await client.init();
+            await client.initpromise;
         for (let i = 0;; i++) {
             if ('host' in headers)
                 headers.host = urlO.host;
