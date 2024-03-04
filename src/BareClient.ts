@@ -135,7 +135,7 @@ export class BareClient {
 
 
     let wsImpl = (webSocketImpl || WebSocket) as WebSocketImpl;
-    const socket = new wsImpl("wss:null", protocols);
+    const socket = new wsImpl("ws://127.0.0.1:1", protocols);
 
     let fakeProtocol = '';
 
@@ -340,7 +340,7 @@ export class BareClient {
     let switcher = findSwitcher();
     if (!switcher.active) throw "there are no bare clients";
     const client = switcher.active;
-    if (!client.ready) await (client as any).initpromise;
+    if (!client.ready) await client.init();
 
     for (let i = 0; ; i++) {
       if ('host' in headers) headers.host = urlO.host;
