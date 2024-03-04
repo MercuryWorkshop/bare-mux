@@ -1,6 +1,6 @@
 {
   "name": "@mercuryworkshop/bare-mux",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "",
   "type": "module",
   "scripts": {
@@ -8,14 +8,20 @@
   },
   "author": "",
   "license": "MIT",
-  "exports": {
-    "import": "./dist/index.js",
-    "require": "./dist/index.cjs"
-  },
-  "browser": "dist/index.cjs",
   "main": "dist/index.cjs",
-  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "node": {
+        "require": "./lib/index.cjs",
+        "import": "./lib/index.cjs"
+      },
+      "browser": {
+        "import": "./dist/index.js",
+        "require": "./dist/index.cjs"
+      }
+    }
+  },
   "files": [
     "dist"
   ],
