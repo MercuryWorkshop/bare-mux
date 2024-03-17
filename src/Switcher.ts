@@ -2,7 +2,7 @@ import { BareTransport } from "./BareTypes";
 import RemoteTransport from "./RemoteClient";
 
 self.BCC_VERSION = "3.0.4";
-console.warn("BCC_VERSION: " + self.BCC_VERSION);
+console.debug("BCC_VERSION: " + self.BCC_VERSION);
 
 declare global {
   interface ServiceWorkerGlobalScope {
@@ -65,7 +65,7 @@ export function findSwitcher(): Switcher {
       _parent = _parent.parent;
 
       if (_parent && _parent["gSwitcher"]) {
-        console.warn("found implementation on parent");
+        console.debug("Found implementation on parent");
         globalThis.gSwitcher = _parent["gSwitcher"];
         return _parent["gSwitcher"];
       }
