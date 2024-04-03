@@ -42,7 +42,7 @@ To switch between transports, use the `SetTransport` function.
 import { SetTransport } from '@mercuryworkshop/bare-mux';
 
 SetTransport("EpxMod.EpoxyClient", { wisp: "wss://wisp.mercurywork.shop" });
-SetTransport("BareMod.BareClient", "wss://some-bare-server.com" });
+SetTransport("BareMod.BareClient", "https://some-bare-server.com" });
 ```
 
 If not using a bundler, include the `bare.cjs` file in releases and call `BareMux.SetTransport`.
