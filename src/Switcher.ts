@@ -1,7 +1,7 @@
 import { BareTransport } from "./BareTypes";
 import RemoteTransport from "./RemoteClient";
 
-self.BCC_VERSION = "3.0.6";
+self.BCC_VERSION = "3.0.7";
 console.debug("BCC_VERSION: " + self.BCC_VERSION);
 
 declare global {
@@ -77,6 +77,7 @@ export function findSwitcher(): Switcher {
 
   throw "unreachable";
 }
+findSwitcher();
 
 export function SetTransport(name: string, ...config: any[]) {
   let switcher = findSwitcher();
