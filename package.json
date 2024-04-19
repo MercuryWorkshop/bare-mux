@@ -30,7 +30,8 @@
     "esbuild": "^0.19.11",
     "esbuild-plugin-d.ts": "^1.2.2",
     "rollup": "^4.9.6",
-    "rollup-plugin-typescript2": "^0.36.0"
+    "rollup-plugin-typescript2": "^0.36.0",
+    "@rollup/plugin-replace": "^5.0.5"
   },
   "dependencies": {
     "@types/uuid": "^9.0.8",

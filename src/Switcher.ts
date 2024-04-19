@@ -1,8 +1,9 @@
 import { BareTransport } from "./BareTypes";
 import RemoteTransport from "./RemoteClient";
 
-self.BCC_VERSION = "3.0.7";
-console.debug("BCC_VERSION: " + self.BCC_VERSION);
+//@ts-expect-error not installing node types for this one thing
+self.BCC_VERSION = process.env.BARE_MUX_VERSION;
+console.debug("BARE_MUX_VERSION: " + self.BCC_VERSION);
 
 declare global {
   interface ServiceWorkerGlobalScope {
