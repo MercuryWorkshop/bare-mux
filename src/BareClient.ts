@@ -211,37 +211,6 @@ export class BareClient {
       },
     )
 
-    // const socket = this.client.connect(
-    //   remote,
-    //   protocols,
-    //   async () => {
-    //     const resolvedHeaders =
-    //       typeof options.headers === 'function'
-    //         ? await options.headers()
-    //         : options.headers || {};
-    //
-    //     const requestHeaders: BareHeaders =
-    //       resolvedHeaders instanceof Headers
-    //         ? Object.fromEntries(resolvedHeaders)
-    //         : resolvedHeaders;
-    //
-    //     // user is expected to specify user-agent and origin
-    //     // both are in spec
-    //
-    //
-    //     return requestHeaders;
-    //   },
-    //   (meta) => {
-    //     fakeProtocol = meta.protocol;
-    //     if (options.setCookiesCallback)
-    //       options.setCookiesCallback(meta.setCookies);
-    //   },
-    //   (readyState) => {
-    //     fakeReadyState = readyState;
-    //   },
-    //   options.webSocketImpl || WebSocket
-    // );
-
     // protocol is always an empty before connecting
     // updated when we receive the metadata
     // this value doesn't change when it's CLOSING or CLOSED etc
