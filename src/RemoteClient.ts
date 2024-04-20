@@ -8,7 +8,12 @@ export function registerRemoteListener(channel: ServiceWorker) {
     if (data.type === "request") {
       const { remote, method, body, headers } = data;
 
-      let response: any = await findSwitcher().active?.request(new URL(remote), method, body, headers, undefined)!;
+      let response: any = await findSwitcher().active?.request(new URL(remote), method, body, headers, undefined)!.catch((err) => {
+        let error = { id: data.id, type: "error", error: err}
+        console.log(error)
+        channel.postMessage(error);
+        return;
+      });
       let transferred: any = [];
       if (response.body instanceof ArrayBuffer || response.body instanceof Blob || response.body instanceof ReadableStream) {
         transferred.push(response.body);
@@ -25,9 +30,15 @@ let remote: RemoteTransport;
 if ("ServiceWorkerGlobalScope" in self) {
   addEventListener("message", async ({ data }) => {
     if (data.type === "response") {
-      let resolve = remote.promises.get(data.id);
-      if (resolve) {
-        resolve(data);
+      let promise = remote.promises.get(data.id) as any;
+      if (promise!.resolve) {
+        promise!.resolve(data);
+        remote.promises.delete(data.id);
+      }
+    } else if (data.type === "error") {
+      let promise = remote.promises.get(data.id) as any;
+      if (promise!.reject) {
+        promise!.reject(data.error);
         remote.promises.delete(data.id);
       }
     }
@@ -75,7 +86,7 @@ export default class RemoteTransport implements BareTransport {
 
 
     return await new Promise((resolve, reject) => {
-      this.promises.set(id, resolve);
+      this.promises.set(id, { resolve, reject } as any);
     });
   }
 
