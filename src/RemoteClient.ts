@@ -10,17 +10,18 @@ export function registerRemoteListener(channel: ServiceWorker) {
 
       let response: any = await findSwitcher().active?.request(new URL(remote), method, body, headers, undefined)!.catch((err) => {
         let error = { id: data.id, type: "error", error: err}
-        console.log(error)
+        console.error(err)
         channel.postMessage(error);
-        return;
       });
-      let transferred: any = [];
-      if (response.body instanceof ArrayBuffer || response.body instanceof Blob || response.body instanceof ReadableStream) {
-        transferred.push(response.body);
+      if (response) {
+        let transferred: any = [];
+        if (response.body instanceof ArrayBuffer || response.body instanceof Blob || response.body instanceof ReadableStream) {
+          transferred.push(response.body);
+        }
+        response.id = data.id;
+        response.type = "response";
+        channel.postMessage(response, transferred);
       }
-      response.id = data.id;
-      response.type = "response";
-      channel.postMessage(response, transferred);
     }
   });
 }
