@@ -214,13 +214,7 @@ export class BareClient {
     // protocol is always an empty before connecting
     // updated when we receive the metadata
     // this value doesn't change when it's CLOSING or CLOSED etc
-    const getReadyState = () => {
-      const realReadyState = getRealReadyState.call(socket);
-      // readyState should only be faked when the real readyState is OPEN
-      return realReadyState === WebSocketFields.OPEN
-        ? fakeReadyState
-        : realReadyState;
-    };
+    const getReadyState = () => fakeReadyState;
 
     // we have to hook .readyState ourselves
 
