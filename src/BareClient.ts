@@ -301,6 +301,11 @@ export class BareClient {
     }
 
     let switcher = findSwitcher();
+    if (!switcher.active) {
+      // in race conditions we trust
+      await new Promise(r => setTimeout(r, 1000));
+      switcher = findSwitcher();
+    };
     if (!switcher.active) throw "there are no bare clients";
     const client = switcher.active;
     if (!client.ready) await client.init();
