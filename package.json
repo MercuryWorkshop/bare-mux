@@ -15,7 +15,10 @@
       "require": "./dist/bare.cjs",
       "types": "./dist/index.d.ts"
     },
-    "./node": "./lib/index.cjs"
+    "./node": {
+      "types": "./lib/index.d.ts",
+      "main": "./lib/index.cjs"
+    }
   },
   "files": [
     "dist",
