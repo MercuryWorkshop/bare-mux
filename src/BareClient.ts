@@ -103,7 +103,7 @@ export class BareClient {
   ): WebSocket {
     let switcher = findSwitcher();
     let client = switcher.active;
-    if (!client) throw "invalid switcher";
+    if (!client) throw "there are no bare clients";
 
     if (!client.ready)
       throw new TypeError(
@@ -166,7 +166,7 @@ export class BareClient {
     requestHeaders['Upgrade'] = 'websocket';
     // requestHeaders['User-Agent'] = navigator.userAgent;
     requestHeaders['Connection'] = 'Upgrade';
-    const sendData = client.connect(
+    const websocket = client.connect(
       remote,
       origin,
       protocols,
@@ -208,9 +208,11 @@ export class BareClient {
       },
       () => {
         fakeReadyState = WebSocketFields.CLOSED;
+        socket.dispatchEvent(new Event("error"))
       },
     )
-
+    const sendData = websocket[0];
+    const close = websocket[1];
     // protocol is always an empty before connecting
     // updated when we receive the metadata
     // this value doesn't change when it's CLOSING or CLOSED etc
@@ -245,6 +247,10 @@ export class BareClient {
       if (error) throw error;
       sendData(args[0] as any);
     };
+
+    socket.close = function(code: number, reason: string) {
+      close(code, reason)
+    }
 
     Object.defineProperty(socket, 'url', {
       get: () => remote.toString(),

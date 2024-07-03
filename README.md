@@ -21,7 +21,7 @@ export interface BareTransport {
     onmessage: (data: Blob | ArrayBuffer | string) => void,
     onclose: (code: number, reason: string) => void,
     onerror: (error: string) => void,
-  ) => (data: Blob | ArrayBuffer | string) => void;
+  ) => [( (data: Blob | ArrayBuffer | string) => void, (code: number, reason: string) => void )] => void;
 
   request: (
     remote: URL,
