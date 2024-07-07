@@ -3,6 +3,13 @@ import { WorkerMessage, WorkerResponse } from "./connection"
 
 let currentTransport: BareTransport | null = null;
 
+function noClients(): Error {
+	// @ts-expect-error mdn error constructor: new Error(message, options)
+	return new Error("there are no bare clients", {
+		cause: "No BareTransport was set. Try creating a BareMuxConnection and calling setTransport() or setManualTransport() on it before using BareClient."
+	});
+}
+
 function handleConnection(port: MessagePort) {
 	port.onmessage = async (event: MessageEvent) => {
 		const port = event.data.port;
@@ -10,7 +17,7 @@ function handleConnection(port: MessagePort) {
 
 		if (message.type === "set") {
 			try {
-				const AsyncFunction = (async function () {}).constructor;
+				const AsyncFunction = (async function() { }).constructor;
 
 				// @ts-expect-error
 				const func = new AsyncFunction(message.client);
@@ -18,12 +25,12 @@ function handleConnection(port: MessagePort) {
 				console.log("set transport to ", currentTransport);
 
 				port.postMessage(<WorkerResponse>{ type: "set" });
-			} catch(err) {
+			} catch (err) {
 				port.postMessage(<WorkerResponse>{ type: "error", error: err });
 			}
 		} else if (message.type === "fetch") {
 			try {
-				if (!currentTransport) throw new Error("No BareTransport was set. Try creating a BareMuxConnection and calling set() on it.");
+				if (!currentTransport) throw noClients();
 				if (!currentTransport.ready) await currentTransport.init();
 
 				const resp = await currentTransport.request(
@@ -44,7 +51,7 @@ function handleConnection(port: MessagePort) {
 			}
 		} else if (message.type === "websocket") {
 			try {
-				if (!currentTransport) throw new Error("No BareTransport was set. Try creating a BareMuxConnection and calling set() on it.");
+				if (!currentTransport) throw noClients();
 				if (!currentTransport.ready) await currentTransport.init();
 
 				const onopen = (protocol: string) => {

@@ -46,6 +46,23 @@ type BroadcastMessage = {
 	path?: string,
 }
 
+function createPort(path: string, channel: BroadcastChannel): MessagePort {
+	const worker = new SharedWorker(path, "bare-mux-worker");
+	navigator.serviceWorker.addEventListener("message", event => {
+		if (event.data.type === "getPort" && event.data.port) {
+			console.debug("bare-mux: recieved request for port from sw");
+			event.data.port.postMessage(worker.port, [worker.port]);
+		}
+	});
+	channel.onmessage = (event: MessageEvent) => {
+		if (event.data.type === "getPath") {
+			console.debug("bare-mux: recieved request for worker path from broadcast channel");
+			channel.postMessage(<BroadcastMessage>{ type: "path", path: path });
+		}
+	};
+	return worker.port;
+}
+
 export class WorkerConnection {
 	channel: BroadcastChannel;
 	port: MessagePort | Promise<MessagePort>;
@@ -62,34 +79,14 @@ export class WorkerConnection {
 		} else if (workerPath && SharedWorker) {
 			// running in a window, was passed a workerPath
 			// create the SharedWorker and help other bare-mux clients get the workerPath
-			navigator.serviceWorker.addEventListener("message", event => {
-				if (event.data.type === "getPort" && event.data.port) {
-					const worker = new SharedWorker(workerPath, "bare-mux-worker");
-					event.data.port.postMessage(worker.port, [worker.port]);
-				}
-			});
-
-			this.channel.onmessage = (event: MessageEvent) => {
-				if (event.data.type === "getPath") {
-					this.channel.postMessage(<BroadcastMessage>{ type: "path", path: workerPath });
-				}
-			}
-
-			const worker = new SharedWorker(workerPath, "bare-mux-worker");
-			this.port = worker.port;
+			this.port = createPort(workerPath, this.channel);
 		} else if (SharedWorker) {
 			// running in a window, was not passed a workerPath
 			// ask other bare-mux clients for the workerPath
 			this.port = new Promise(resolve => {
 				this.channel.onmessage = (event: MessageEvent) => {
 					if (event.data.type === "path") {
-						const worker = new SharedWorker(event.data.path, "bare-mux-worker");
-						this.channel.onmessage = (event: MessageEvent) => {
-							if (event.data.type === "getPath") {
-								this.channel.postMessage(<BroadcastMessage>{ type: "path", path: event.data.path });
-							}
-						}
-						resolve(worker.port);
+						resolve(createPort(event.data.path, this.channel));
 					}
 				}
 				this.channel.postMessage(<BroadcastMessage>{ type: "getPath" });
