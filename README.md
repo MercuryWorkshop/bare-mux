@@ -47,12 +47,6 @@ const conn = new BareMuxConnection("/bare-mux/worker.js");
 // If your transport is an ES module and exports the class as the default export
 await conn.setTransport("/bare-mux/transport-module.js", ["arg1", "ws://localhost:4000"]);
 
-// Set Transport Manually
-await conn.setManualTransport(`
-    const exports = await import("/bare-mux/transport.js");
-    return new exports.BareClient("https://tomp.app");
-`);
-
 /// As a proxy developer
 import { BareClient } from "@mercuryworkshop/bare-mux";
 const client = new BareClient();
