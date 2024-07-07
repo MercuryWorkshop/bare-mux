@@ -30,13 +30,24 @@ const configs = [
 	{
 		input: './src/index.ts',
 		output: {
-			file: 'dist/client.js',
+			file: 'dist/index.js',
 			format: 'esm',
 			sourcemap: true,
 			exports: 'named',
 		},
 		plugins: commonPlugins()
-	}
+	},
+	{
+		input: 'src/index.ts',
+		output: {
+		  file: 'dist/bare.cjs',
+		  format: 'umd',
+		  name: 'BareMux',
+		  sourcemap: true,
+		  exports: 'auto',
+		},
+		plugins: commonPlugins(),
+	},
 ];
 
 export default configs;

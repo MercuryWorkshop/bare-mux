@@ -14,8 +14,9 @@
 	],
 	"exports": {
 		".": {
-			"import": "./dist/client.js",
-			"types": "./dist/client.d.ts"
+			"import": "./dist/index.js",
+			"require": "./dist/bare.cjs",
+			"types": "./dist/index.d.ts"
 		},
 		"./node": {
 			"import": "./lib/index.cjs",
