@@ -135,9 +135,9 @@ export class BareClient {
 	createWebSocket(
 		remote: string | URL,
 		protocols: string | string[] | undefined = [],
-		webSocketImpl: WebSocketImpl,
-		requestHeaders: BareHeaders,
-		arrayBufferImpl: typeof ArrayBuffer,
+		webSocketImpl?: WebSocketImpl,
+		requestHeaders?: BareHeaders,
+		arrayBufferImpl?: typeof ArrayBuffer,
 	): WebSocket {
 		try {
 			remote = new URL(remote);
