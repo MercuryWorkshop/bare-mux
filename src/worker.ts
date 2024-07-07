@@ -7,14 +7,16 @@ function handleConnection(port: MessagePort) {
 	port.onmessage = async (event: MessageEvent) => {
 		const port = event.data.port;
 		const message: WorkerMessage = event.data.message;
+
 		if (message.type === "set") {
 			try {
 				const AsyncFunction = (async function () {}).constructor;
+
 				// @ts-expect-error
 				const func = new AsyncFunction(message.client);
-				console.log(func);
 				currentTransport = await func();
 				console.log("set transport to ", currentTransport);
+
 				port.postMessage(<WorkerResponse>{ type: "set" });
 			} catch(err) {
 				port.postMessage(<WorkerResponse>{ type: "error", error: err });
@@ -23,6 +25,7 @@ function handleConnection(port: MessagePort) {
 			try {
 				if (!currentTransport) throw new Error("No BareTransport was set. Try creating a BareMuxConnection and calling set() on it.");
 				if (!currentTransport.ready) await currentTransport.init();
+
 				const resp = await currentTransport.request(
 					new URL(message.fetch.remote),
 					message.fetch.method,
@@ -43,6 +46,7 @@ function handleConnection(port: MessagePort) {
 			try {
 				if (!currentTransport) throw new Error("No BareTransport was set. Try creating a BareMuxConnection and calling set() on it.");
 				if (!currentTransport.ready) await currentTransport.init();
+
 				const onopen = (protocol: string) => {
 					message.websocket.channel.postMessage({ type: "open", args: [protocol] });
 				};
@@ -76,6 +80,7 @@ function handleConnection(port: MessagePort) {
 						close(event.data.closeCode, event.data.closeReason);
 					}
 				}
+
 				port.postMessage(<WorkerResponse>{ type: "websocket" });
 			} catch (err) {
 				port.postMessage(<WorkerResponse>{ type: "error", error: err });

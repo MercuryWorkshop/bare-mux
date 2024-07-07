@@ -107,10 +107,17 @@ export class BareMuxConnection {
 		this.worker = new WorkerConnection(workerPath);
 	}
 
-	async setTransport(transport: string) {
+	async setTransport(path: string, options: any[]) {
+		await this.setManualTransport(`
+			const { default: BareTransport } = await import("${path}");
+			return new BareTransport(${options.map(x => JSON.stringify(x)).join(", ")});
+		`);
+	}
+
+	async setManualTransport(functionBody: string) {
 		await this.worker.sendMessage({
 			type: "set",
-			client: transport,
+			client: functionBody,
 		});
 	}
 }
