@@ -8,7 +8,7 @@ function handleConnection(port: MessagePort) {
 		const port = event.data.port;
 		const message: WorkerMessage = event.data.message;
 		if (message.type === "set") {
-			const func = new Function(message.client);
+			const func = new Function("return (async ()=>{" + message.client + "})()");
 			currentTransport = await func();
 			console.log("set transport to ", currentTransport);
 			port.postMessage(<WorkerResponse>{ type: "set" });

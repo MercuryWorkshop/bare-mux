@@ -43,10 +43,10 @@ Here is an example of using bare-mux:
 import { BareMuxConnection } from "@mercuryworkshop/bare-mux";
 const conn = new BareMuxConnection("/bare-mux/worker.js");
 // Set Bare-Client transport
-await conn.setTransport(`return (async ()=>{
+await conn.setTransport(`
     const exports = await import("/bare-mux/index.js");
     return new exports.BareClient("https://tomp.app");
-})()`);
+`);
 
 /// As a proxy developer
 import { BareClient } from "@mercuryworkshop/bare-mux";
