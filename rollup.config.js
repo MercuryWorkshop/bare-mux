@@ -28,7 +28,7 @@ const configs = [
 		plugins: commonPlugins(),
 	},
 	{
-		input: './src/client.ts',
+		input: './src/index.ts',
 		output: {
 			file: 'dist/client.js',
 			format: 'esm',
