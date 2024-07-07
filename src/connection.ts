@@ -48,12 +48,14 @@ type BroadcastMessage = {
 
 function createPort(path: string, channel: BroadcastChannel): MessagePort {
 	const worker = new SharedWorker(path, "bare-mux-worker");
-	navigator.serviceWorker.addEventListener("message", event => {
-		if (event.data.type === "getPort" && event.data.port) {
-			console.debug("bare-mux: recieved request for port from sw");
-			event.data.port.postMessage(worker.port, [worker.port]);
-		}
-	});
+	// uv removes navigator.serviceWorker so this errors
+	if (navigator.serviceWorker)
+		navigator.serviceWorker.addEventListener("message", event => {
+			if (event.data.type === "getPort" && event.data.port) {
+				console.debug("bare-mux: recieved request for port from sw");
+				event.data.port.postMessage(worker.port, [worker.port]);
+			}
+		});
 	channel.onmessage = (event: MessageEvent) => {
 		if (event.data.type === "getPath") {
 			console.debug("bare-mux: recieved request for worker path from broadcast channel");
