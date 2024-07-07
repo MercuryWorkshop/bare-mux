@@ -1,14 +1,10 @@
 {
 	"compilerOptions": {
+		"target": "es2021",
 		"lib": [
 			"es2021",
 			"DOM"
 		],
-		"paths": {
-			"tslib": [
-				"./node_modules/tslib/tslib.d.ts"
-			]
-		},
 		"declaration": true
 	}
 }

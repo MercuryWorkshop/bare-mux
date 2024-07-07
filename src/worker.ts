@@ -8,10 +8,17 @@ function handleConnection(port: MessagePort) {
 		const port = event.data.port;
 		const message: WorkerMessage = event.data.message;
 		if (message.type === "set") {
-			const func = new Function("return (async ()=>{" + message.client + "})()");
-			currentTransport = await func();
-			console.log("set transport to ", currentTransport);
-			port.postMessage(<WorkerResponse>{ type: "set" });
+			try {
+				const AsyncFunction = (async function () {}).constructor;
+				// @ts-expect-error
+				const func = new AsyncFunction(message.client);
+				console.log(func);
+				currentTransport = await func();
+				console.log("set transport to ", currentTransport);
+				port.postMessage(<WorkerResponse>{ type: "set" });
+			} catch(err) {
+				port.postMessage(<WorkerResponse>{ type: "error", error: err });
+			}
 		} else if (message.type === "fetch") {
 			try {
 				if (!currentTransport) throw new Error("No BareTransport was set. Try creating a BareMuxConnection and calling set() on it.");
