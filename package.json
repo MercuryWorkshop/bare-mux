@@ -9,12 +9,18 @@
 	},
 	"author": "",
 	"files": [
-		"dist"
+		"dist",
+		"lib"
 	],
 	"exports": {
 		".": {
 			"import": "./dist/client.js",
 			"types": "./dist/client.d.ts"
+		},
+		"./node": {
+			"import": "./lib/index.cjs",
+			"require": "./lib/index.cjs",
+			"types": "./lib/index.d.ts"
 		}
 	},
 	"devDependencies": {
