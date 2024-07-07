@@ -1,0 +1,27 @@
+{
+	"name": "@mercuryworkshop/bare-mux",
+	"version": "2.0.0",
+	"description": "",
+	"type": "module",
+	"scripts": {
+		"build": "rollup -c",
+		"prepare": "npm run build"
+	},
+	"author": "",
+	"files": [
+		"dist"
+	],
+	"exports": {
+		".": {
+			"import": "dist/client.js",
+			"types": "dist/client.d.ts"
+		}
+	},
+	"devDependencies": {
+		"@rollup/plugin-inject": "^5.0.5",
+		"@rollup/plugin-replace": "^5.0.5",
+		"rollup": "^4.9.6",
+		"rollup-plugin-typescript2": "^0.36.0",
+		"tslib": "^2.6.3"
+	}
+}
