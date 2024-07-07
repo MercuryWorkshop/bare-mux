@@ -44,11 +44,11 @@ import { BareMuxConnection } from "@mercuryworkshop/bare-mux";
 const conn = new BareMuxConnection("/bare-mux/worker.js");
 // Set Bare-Client transport
 await conn.setManualTransport(`
-    const exports = await import("/bare-mux/index.js");
+    const exports = await import("/bare-mux/transport.js");
     return new exports.BareClient("https://tomp.app");
 `);
 // If your transport is an ES module and exports the class as the default export
-await conn.setTransport("/bare-mux/module.js", ["arg1", "ws://localhost:4000"]);
+await conn.setTransport("/bare-mux/transport-module.js", ["arg1", "ws://localhost:4000"]);
 
 /// As a proxy developer
 import { BareClient } from "@mercuryworkshop/bare-mux";
