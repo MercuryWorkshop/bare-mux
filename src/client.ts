@@ -1,7 +1,21 @@
 import { BareHeaders, BareTransport, maxRedirects } from './baretypes';
-import { WorkerConnection } from './connection';
+import { WorkerConnection, WorkerMessage, WorkerResponse } from './connection';
 import { WebSocketFields } from './snapshot';
 
+const validChars =
+	"!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~";
+
+export function validProtocol(protocol: string): boolean {
+	for (let i = 0; i < protocol.length; i++) {
+		const char = protocol[i];
+
+		if (!validChars.includes(char)) {
+			return false;
+		}
+	}
+
+	return true;
+}
 
 // get the unhooked value
 const getRealReadyState = Object.getOwnPropertyDescriptor(
@@ -118,7 +132,190 @@ export class BareClient {
 		requestHeaders: BareHeaders,
 		arrayBufferImpl: typeof ArrayBuffer,
 	): WebSocket {
-		throw new Error("todo");
+		try {
+			remote = new URL(remote);
+		} catch (err) {
+			throw new DOMException(
+				`Faiiled to construct 'WebSocket': The URL '${remote}' is invalid.`
+			);
+		}
+
+		if (!wsProtocols.includes(remote.protocol))
+			throw new DOMException(
+				`Failed to construct 'WebSocket': The URL's scheme must be either 'ws' or 'wss'. '${remote.protocol}' is not allowed.`
+			);
+
+		if (!Array.isArray(protocols)) protocols = [protocols];
+
+		protocols = protocols.map(String);
+
+		for (const proto of protocols)
+			if (!validProtocol(proto))
+				throw new DOMException(
+					`Failed to construct 'WebSocket': The subprotocol '${proto}' is invalid.`
+				);
+
+
+		let wsImpl = (webSocketImpl || WebSocket) as WebSocketImpl;
+		const socket = new wsImpl("ws://127.0.0.1:1", protocols);
+
+		let fakeProtocol = '';
+
+		let fakeReadyState: number = WebSocketFields.CONNECTING;
+
+		let initialErrorHappened = false;
+		socket.addEventListener("error", (e) => {
+			if (!initialErrorHappened) {
+				fakeReadyState = WebSocket.CONNECTING;
+				e.stopImmediatePropagation();
+				initialErrorHappened = true;
+			}
+		});
+		let initialCloseHappened = false;
+		socket.addEventListener("close", (e) => {
+			if (!initialCloseHappened) {
+				e.stopImmediatePropagation();
+				initialCloseHappened = true;
+			}
+		});
+		// TODO socket onerror will be broken
+
+		arrayBufferImpl = arrayBufferImpl || wsImpl.constructor.constructor("return ArrayBuffer")().prototype;
+		requestHeaders = requestHeaders || {};
+		requestHeaders['Host'] = (new URL(remote)).host;
+		// requestHeaders['Origin'] = origin;
+		requestHeaders['Pragma'] = 'no-cache';
+		requestHeaders['Cache-Control'] = 'no-cache';
+		requestHeaders['Upgrade'] = 'websocket';
+		// requestHeaders['User-Agent'] = navigator.userAgent;
+		requestHeaders['Connection'] = 'Upgrade';
+
+		const onopen = (protocol: string) => {
+			fakeReadyState = WebSocketFields.OPEN;
+			fakeProtocol = protocol;
+
+			(socket as any).meta = {
+				headers: {
+					"sec-websocket-protocol": protocol,
+				}
+			}; // what the fuck is a meta
+			socket.dispatchEvent(new Event("open"));
+		};
+
+		const onmessage = async (payload) => {
+			if (typeof payload === "string") {
+				socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+			} else if ("byteLength" in payload) {
+				if (socket.binaryType === "blob") {
+					payload = new Blob([payload]);
+				} else {
+					Object.setPrototypeOf(payload, arrayBufferImpl);
+				}
+
+				socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+			} else if ("arrayBuffer" in payload) {
+				if (socket.binaryType === "arraybuffer") {
+					payload = await payload.arrayBuffer()
+					Object.setPrototypeOf(payload, arrayBufferImpl);
+				}
+
+				socket.dispatchEvent(new MessageEvent("message", { data: payload }));
+			}
+		};
+
+		const onclose = (code, reason) => {
+			fakeReadyState = WebSocketFields.CLOSED;
+			socket.dispatchEvent(new CloseEvent("close", { code, reason }));
+		};
+
+		const onerror = () => {
+			fakeReadyState = WebSocketFields.CLOSED;
+			socket.dispatchEvent(new Event("error"))
+		};
+
+		const channel = new MessageChannel();
+
+		channel.port1.onmessage = event => {
+			if (event.data.type === "open") {
+				onopen(event.data.args[0]);
+			} else if (event.data.type === "message") {
+				onmessage(event.data.args[0]);
+			} else if (event.data.type === "close") {
+				onclose(event.data.args[0], event.data.args[1]);
+			} else if (event.data.type === "error") {
+				onerror(/* event.data.args[0] */);
+			}
+		}
+
+		this.worker.sendMessage({
+			type: "websocket",
+			websocket: {
+				url: remote.toString(),
+				origin: origin,
+				protocols: protocols,
+				requestHeaders: requestHeaders,
+			},
+			websocketChannel: channel.port2,
+		}, [channel.port2])
+
+		// protocol is always an empty before connecting
+		// updated when we receive the metadata
+		// this value doesn't change when it's CLOSING or CLOSED etc
+		const getReadyState = () => fakeReadyState;
+
+		// we have to hook .readyState ourselves
+
+		Object.defineProperty(socket, 'readyState', {
+			get: getReadyState,
+			configurable: true,
+			enumerable: true,
+		});
+
+		/**
+		 * @returns The error that should be thrown if send() were to be called on this socket according to the fake readyState value
+		 */
+		const getSendError = () => {
+			const readyState = getReadyState();
+
+			if (readyState === WebSocketFields.CONNECTING)
+				return new DOMException(
+					"Failed to execute 'send' on 'WebSocket': Still in CONNECTING state."
+				);
+		};
+
+		// we have to hook .send ourselves
+		// use ...args to avoid giving the number of args a quantity
+		// no arguments will trip the following error: TypeError: Failed to execute 'send' on 'WebSocket': 1 argument required, but only 0 present.
+		socket.send = function(...args) {
+			const error = getSendError();
+
+			if (error) throw error;
+			let data = args[0];
+			// @ts-expect-error idk why it errors?
+			if (data.buffer) data = data.buffer;
+
+			channel.port1.postMessage({ type: "data", data: data }, data instanceof ArrayBuffer ? [data] : []);
+		};
+
+		socket.close = function(code: number, reason: string) {
+			channel.port1.postMessage({ type: "close", closeCode: code, closeReason: reason });
+		}
+
+		Object.defineProperty(socket, 'url', {
+			get: () => remote.toString(),
+			configurable: true,
+			enumerable: true,
+		});
+
+		const getProtocol = () => fakeProtocol;
+
+		Object.defineProperty(socket, 'protocol', {
+			get: getProtocol,
+			configurable: true,
+			enumerable: true,
+		});
+
+		return socket;
 	}
 
 	async fetch(
@@ -159,15 +356,15 @@ export class BareClient {
 			if ('host' in headers) headers.host = urlO.host;
 			else headers.Host = urlO.host;
 
-			let resp = (await this.worker.sendMessage({
+			const message = Object.assign({
 				type: "fetch",
 				fetch: {
 					remote: urlO.toString(),
 					method: req.method,
-					body: body,
 					headers: headers,
-				}
-			})).fetch;
+				},
+			}, body ? { fetchBody: body } : {});
+			let resp = (await this.worker.sendMessage(message as WorkerMessage, body ? [body] : [])).fetch;
 
 			let responseobj: BareResponse & Partial<BareResponseFetch> = new Response(
 				statusEmpty.includes(resp.status) ? undefined : resp.body, {
