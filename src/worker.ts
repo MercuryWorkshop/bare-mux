@@ -19,7 +19,7 @@ function handleConnection(port: MessagePort) {
 				const resp = await currentTransport.request(
 					new URL(message.fetch.remote),
 					message.fetch.method,
-					message.fetchBody,
+					message.fetch.body,
 					message.fetch.headers,
 					null
 				);
@@ -37,19 +37,19 @@ function handleConnection(port: MessagePort) {
 				if (!currentTransport) throw new Error("No BareTransport was set. Try creating a BareMuxConnection and calling set() on it.");
 				if (!currentTransport.ready) await currentTransport.init();
 				const onopen = (protocol: string) => {
-					message.websocketChannel.postMessage({ type: "open", args: [protocol] });
+					message.websocket.channel.postMessage({ type: "open", args: [protocol] });
 				};
 				const onclose = (code: number, reason: string) => {
-					message.websocketChannel.postMessage({ type: "close", args: [code, reason] });
+					message.websocket.channel.postMessage({ type: "close", args: [code, reason] });
 				};
 				const onerror = (error: string) => {
-					message.websocketChannel.postMessage({ type: "error", args: [error] });
+					message.websocket.channel.postMessage({ type: "error", args: [error] });
 				};
 				const onmessage = (data: Blob | ArrayBuffer | string) => {
 					if (data instanceof ArrayBuffer) {
-						message.websocketChannel.postMessage({ type: "message", args: [data] }, [data]);
+						message.websocket.channel.postMessage({ type: "message", args: [data] }, [data]);
 					} else {
-						message.websocketChannel.postMessage({ type: "message", args: [data] });
+						message.websocket.channel.postMessage({ type: "message", args: [data] });
 					}
 				}
 				const [data, close] = currentTransport.connect(
@@ -62,7 +62,7 @@ function handleConnection(port: MessagePort) {
 					onclose,
 					onerror,
 				);
-				message.websocketChannel.onmessage = (event: MessageEvent) => {
+				message.websocket.channel.onmessage = (event: MessageEvent) => {
 					if (event.data.type === "data") {
 						data(event.data.data);
 					} else if (event.data.type === "close") {

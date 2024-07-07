@@ -254,8 +254,8 @@ export class BareClient {
 				origin: origin,
 				protocols: protocols,
 				requestHeaders: requestHeaders,
+				channel: channel.port2,
 			},
-			websocketChannel: channel.port2,
 		}, [channel.port2])
 
 		// protocol is always an empty before connecting
@@ -356,15 +356,15 @@ export class BareClient {
 			if ('host' in headers) headers.host = urlO.host;
 			else headers.Host = urlO.host;
 
-			const message = Object.assign({
+			let resp = (await this.worker.sendMessage(<WorkerMessage>{
 				type: "fetch",
 				fetch: {
 					remote: urlO.toString(),
 					method: req.method,
 					headers: headers,
+					body: body || undefined,
 				},
-			}, body ? { fetchBody: body } : {});
-			let resp = (await this.worker.sendMessage(message as WorkerMessage, body ? [body] : [])).fetch;
+			}, body ? [body] : [])).fetch;
 
 			let responseobj: BareResponse & Partial<BareResponseFetch> = new Response(
 				statusEmpty.includes(resp.status) ? undefined : resp.body, {

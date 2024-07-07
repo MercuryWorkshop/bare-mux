@@ -18,15 +18,15 @@ export type WorkerMessage = {
 		remote: string,
 		method: string,
 		headers: BareHeaders,
-	},
-	fetchBody?: ReadableStream,
+		body: ReadableStream | undefined,
+	}
 	websocket?: {
 		url: string,
 		origin: string,
 		protocols: string[],
 		requestHeaders: BareHeaders,
+		channel: MessagePort,
 	},
-	websocketChannel?: MessagePort,
 	client?: string,
 };
 
@@ -64,7 +64,7 @@ export class WorkerConnection {
 			// create the SharedWorker and help other bare-mux clients get the workerPath
 			navigator.serviceWorker.addEventListener("message", event => {
 				if (event.data.type === "getPort" && event.data.port) {
-					const worker = new SharedWorker(workerPath);
+					const worker = new SharedWorker(workerPath, "bare-mux-worker");
 					event.data.port.postMessage(worker.port, [worker.port]);
 				}
 			});
