@@ -3,7 +3,7 @@ import replace from '@rollup/plugin-replace';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import typescript from 'rollup-plugin-typescript2';
-
+import terser from '@rollup/plugin-terser';
 const pkg = JSON.parse(await readFile('package.json'));
 process.env.BARE_MUX_VERSION = pkg.version;
 
@@ -47,7 +47,7 @@ const configs = [
       sourcemap: true,
       exports: 'named',
     },
-    plugins: commonPlugins(),
+    plugins: [commonPlugins(),terser()],
   },
   // require
   {
@@ -59,7 +59,7 @@ const configs = [
       sourcemap: true,
       exports: 'auto',
     },
-    plugins: commonPlugins(),
+    plugins: [commonPlugins(),terser()],
   },
 ];
 
