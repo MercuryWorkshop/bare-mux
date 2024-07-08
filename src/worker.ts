@@ -33,7 +33,7 @@ function handleConnection(port: MessagePort) {
 
 				port.postMessage(<WorkerResponse>{ type: "set" });
 			} catch (err) {
-				console.error(err);
+				console.error("error while processing 'set': ", err);
 				port.postMessage(<WorkerResponse>{ type: "error", error: err });
 			}
 		} else if (message.type === "get") {
@@ -57,7 +57,7 @@ function handleConnection(port: MessagePort) {
 					port.postMessage(<WorkerResponse>{ type: "fetch", fetch: resp });
 				}
 			} catch (err) {
-				console.error(err);
+				console.error("error while processing 'fetch': ", err);
 				port.postMessage(<WorkerResponse>{ type: "error", error: err });
 			}
 		} else if (message.type === "websocket") {
@@ -101,7 +101,7 @@ function handleConnection(port: MessagePort) {
 
 				port.postMessage(<WorkerResponse>{ type: "websocket" });
 			} catch (err) {
-				console.error(err);
+				console.error("error while processing 'websocket': ", err);
 				port.postMessage(<WorkerResponse>{ type: "error", error: err });
 			}
 		}

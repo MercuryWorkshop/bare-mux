@@ -142,7 +142,7 @@ export class WorkerConnection {
 		try {
 			await pingPromise;
 		} catch {
-			console.warn("Failed to get a ping response from the worker within 1.5s. Assuming port is dead.");
+			console.warn("bare-mux: Failed to get a ping response from the worker within 1.5s. Assuming port is dead.");
 			this.createChannel();
 			return await this.sendMessage(message, transferable);
 		}
