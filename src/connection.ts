@@ -2,18 +2,8 @@ import { BareHeaders, TransferrableResponse } from "./baretypes";
 
 type SWClient = { postMessage: typeof MessagePort.prototype.postMessage };
 
-function tryGetPort(client: SWClient): Promise<MessagePort> {
-	let channel = new MessageChannel();
-	return new Promise(resolve => {
-		client.postMessage({ type: "getPort", port: channel.port2 }, [channel.port2]);
-		channel.port1.onmessage = event => {
-			resolve(event.data)
-		}
-	});
-}
-
 export type WorkerMessage = {
-	type: "fetch" | "websocket" | "set",
+	type: "fetch" | "websocket" | "set" | "get",
 	fetch?: {
 		remote: string,
 		method: string,
@@ -36,14 +26,37 @@ export type WorkerRequest = {
 }
 
 export type WorkerResponse = {
-	type: "fetch" | "websocket" | "set" | "error",
+	type: "fetch" | "websocket" | "set" | "get" | "error",
 	fetch?: TransferrableResponse,
+	name?: string,
 	error?: Error,
 }
 
 type BroadcastMessage = {
 	type: "getPath" | "path",
 	path?: string,
+}
+
+async function searchForPort(): Promise<MessagePort> {
+	// @ts-expect-error
+	const clients: SWClient[] = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+	const promise: Promise<MessagePort> = Promise.race([...clients.map((x: SWClient) => tryGetPort(x)), new Promise((_, reject) => setTimeout(reject, 1000, new Error("")))]) as Promise<MessagePort>;
+	try {
+		return await promise;
+	} catch {
+		console.warn("bare-mux: failed to get a bare-mux SharedWorker MessagePort within 1s, retrying");
+		return await searchForPort();
+	}
+}
+
+function tryGetPort(client: SWClient): Promise<MessagePort> {
+	let channel = new MessageChannel();
+	return new Promise(resolve => {
+		client.postMessage({ type: "getPort", port: channel.port2 }, [channel.port2]);
+		channel.port1.onmessage = event => {
+			resolve(event.data)
+		}
+	});
 }
 
 function createPort(path: string, channel: BroadcastChannel): MessagePort {
@@ -77,12 +90,12 @@ export class WorkerConnection {
 		if (self.clients) {
 			// running in a ServiceWorker
 			// ask a window for the worker port
-			// @ts-expect-error
-			const clients: Promise<SWClient[]> = self.clients.matchAll({ type: "window", includeUncontrolled: true });
-			this.port = clients.then(clients => Promise.any(clients.map((x: SWClient) => tryGetPort(x))));
+			this.port = searchForPort();
 		} else if (workerPath && SharedWorker) {
 			// running in a window, was passed a workerPath
 			// create the SharedWorker and help other bare-mux clients get the workerPath
+
+			if (!workerPath.startsWith("/") && !workerPath.includes("://")) throw new Error("Invalid URL. Must be absolute or start at the root.");
 			this.port = createPort(workerPath, this.channel);
 		} else if (SharedWorker) {
 			// running in a window, was not passed a workerPath

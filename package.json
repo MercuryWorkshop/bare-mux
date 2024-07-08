@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "rollup -c",
+		"watch": "rollup -cw",
 		"prepare": "npm run build"
 	},
 	"author": "",

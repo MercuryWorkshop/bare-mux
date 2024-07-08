@@ -44,7 +44,7 @@ const configs = [
 		  format: 'umd',
 		  name: 'BareMux',
 		  sourcemap: true,
-		  exports: 'auto',
+		  exports: 'named',
 		},
 		plugins: commonPlugins(),
 	},

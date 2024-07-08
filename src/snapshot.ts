@@ -6,6 +6,7 @@ export const WebSocket = globalThis.WebSocket;
 export const Request = globalThis.Request;
 export const Response = globalThis.Response;
 export const XMLHttpRequest = globalThis.XMLHttpRequest;
+export const SharedWorker = globalThis.SharedWorker;
 
 export const WebSocketFields = {
   prototype: {

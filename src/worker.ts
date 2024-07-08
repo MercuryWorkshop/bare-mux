@@ -2,6 +2,7 @@ import { BareTransport } from "./baretypes";
 import { WorkerMessage, WorkerResponse } from "./connection"
 
 let currentTransport: BareTransport | null = null;
+let currentTransportName: string = "";
 
 function noClients(): Error {
 	// @ts-expect-error mdn error constructor: new Error(message, options)
@@ -21,13 +22,17 @@ function handleConnection(port: MessagePort) {
 
 				// @ts-expect-error
 				const func = new AsyncFunction(message.client);
-				currentTransport = await func();
-				console.log("set transport to ", currentTransport);
+				const [newTransport, name] = await func();
+				currentTransport = newTransport;
+				currentTransportName = name;
+				console.log("set transport to ", currentTransport, name);
 
 				port.postMessage(<WorkerResponse>{ type: "set" });
 			} catch (err) {
 				port.postMessage(<WorkerResponse>{ type: "error", error: err });
 			}
+		} else if (message.type === "get") {
+			port.postMessage(<WorkerResponse>{ type: "get", name: currentTransportName });
 		} else if (message.type === "fetch") {
 			try {
 				if (!currentTransport) throw noClients();
