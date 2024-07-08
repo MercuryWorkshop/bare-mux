@@ -18,8 +18,9 @@ function handleConnection(port: MessagePort) {
 	port.onmessage = async (event: MessageEvent) => {
 		const port = event.data.port;
 		const message: WorkerMessage = event.data.message;
-
-		if (message.type === "set") {
+		if (message.type === "ping") {
+			port.postMessage(<WorkerResponse>{ type: "pong" });
+		} else if (message.type === "set") {
 			try {
 				const AsyncFunction = (async function() { }).constructor;
 
@@ -32,6 +33,7 @@ function handleConnection(port: MessagePort) {
 
 				port.postMessage(<WorkerResponse>{ type: "set" });
 			} catch (err) {
+				console.error(err);
 				port.postMessage(<WorkerResponse>{ type: "error", error: err });
 			}
 		} else if (message.type === "get") {
@@ -55,6 +57,7 @@ function handleConnection(port: MessagePort) {
 					port.postMessage(<WorkerResponse>{ type: "fetch", fetch: resp });
 				}
 			} catch (err) {
+				console.error(err);
 				port.postMessage(<WorkerResponse>{ type: "error", error: err });
 			}
 		} else if (message.type === "websocket") {
@@ -98,6 +101,7 @@ function handleConnection(port: MessagePort) {
 
 				port.postMessage(<WorkerResponse>{ type: "websocket" });
 			} catch (err) {
+				console.error(err);
 				port.postMessage(<WorkerResponse>{ type: "error", error: err });
 			}
 		}
