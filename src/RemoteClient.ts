@@ -101,6 +101,6 @@ export default class RemoteTransport implements BareTransport {
     onclose: (code: number, reason: string) => void,
     onerror: (error: string) => void
   ): (data: Blob | ArrayBuffer | string) => void {
-    throw "why are you calling connect from remoteclient"
+    throw "why are you calling connect from remoteclient" // because it makes sense
   }
 }
