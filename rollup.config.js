@@ -30,7 +30,7 @@ const configs = [
 	{
 		input: './src/index.ts',
 		output: {
-			file: 'dist/index.js',
+			file: 'dist/module.js',
 			format: 'esm',
 			sourcemap: true,
 			exports: 'named',
@@ -40,7 +40,7 @@ const configs = [
 	{
 		input: 'src/index.ts',
 		output: {
-		  file: 'dist/bare.cjs',
+		  file: 'dist/index.js',
 		  format: 'umd',
 		  name: 'BareMux',
 		  sourcemap: true,

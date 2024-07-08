@@ -15,8 +15,8 @@
 	],
 	"exports": {
 		".": {
-			"import": "./dist/index.js",
-			"require": "./dist/bare.cjs",
+			"import": "./dist/module.js",
+			"require": "./dist/index.js",
 			"types": "./dist/index.d.ts"
 		},
 		"./node": {
