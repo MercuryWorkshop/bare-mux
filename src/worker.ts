@@ -1,8 +1,11 @@
 import { BareTransport } from "./baretypes";
-import { WorkerMessage, WorkerResponse } from "./connection"
+import { BroadcastMessage, WorkerMessage, WorkerResponse } from "./connection"
 
 let currentTransport: BareTransport | null = null;
 let currentTransportName: string = "";
+
+const channel = new BroadcastChannel("bare-mux");
+channel.postMessage(<BroadcastMessage>{ type: "refreshPort" });
 
 function noClients(): Error {
 	// @ts-expect-error mdn error constructor: new Error(message, options)

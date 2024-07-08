@@ -32,8 +32,8 @@ export type WorkerResponse = {
 	error?: Error,
 }
 
-type BroadcastMessage = {
-	type: "getPath" | "path",
+export type BroadcastMessage = {
+	type: "getPath" | "path" | "refreshPort",
 	path?: string,
 }
 
@@ -89,8 +89,13 @@ export class WorkerConnection {
 		// @ts-expect-error
 		if (self.clients) {
 			// running in a ServiceWorker
-			// ask a window for the worker port
+			// ask a window for the worker port, register for refreshPort
 			this.port = searchForPort();
+			this.channel.onmessage = (event: MessageEvent) => {
+				if (event.data.type === "refreshPort") {
+					this.port = searchForPort();
+				}
+			}
 		} else if (workerPath && SharedWorker) {
 			// running in a window, was passed a workerPath
 			// create the SharedWorker and help other bare-mux clients get the workerPath
