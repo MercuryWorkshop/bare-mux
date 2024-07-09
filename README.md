@@ -55,3 +55,12 @@ const resp = await client.fetch("https://example.com");
 // Create websocket
 const ws = client.createWebSocket("wss://echo.websocket.events");
 ```
+
+## WebWorker support
+Due to limitations in browsers, there is no way for bare-mux to get a connection to the bare-mux SharedWorker while inside a WebWorker. Proxies that use bare-mux must manually pass in a MessagePort to the SharedWorker to be able to use BareClient in a WebWorker.
+```js
+const connection = new BareMuxConnection();
+const port = await connection.getInnerPort();
+// ... transfer it to worker ...
+const client = new BareClient(port);
+```
