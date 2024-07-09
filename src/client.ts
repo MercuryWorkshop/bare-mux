@@ -125,8 +125,8 @@ export class BareMuxConnection {
 		});
 	}
 
-	async getInnerPort(): Promise<MessagePort> {
-		return await this.worker.port;
+	getInnerPort(): MessagePort | Promise<MessagePort> {
+		return this.worker.port;
 	}
 }
 
