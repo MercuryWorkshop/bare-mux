@@ -64,3 +64,13 @@ const port = await connection.getInnerPort();
 // ... transfer it to worker ...
 const client = new BareClient(port);
 ```
+```js
+// doing this synchronously
+const connection = new Ultraviolet.BareMuxConnection();
+let port;
+connection.getInnerPort().then((MessagePort) => {
+    port = MessagePort;
+});
+// ... transfer it to worker ...
+this.bareClient = new BareClient(port)
+```
