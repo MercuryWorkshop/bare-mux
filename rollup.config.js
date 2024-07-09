@@ -6,7 +6,7 @@ const commonPlugins = () => [
 	typescript(),
 	inject(
 		Object.fromEntries(
-			['fetch', 'Request', 'Response', 'WebSocket', 'XMLHttpRequest'].map(
+			['fetch', 'Request', 'Response', 'WebSocket', 'XMLHttpRequest', 'SharedWorker'].map(
 				(name) => [
 					name,
 					[fileURLToPath(new URL('./src/snapshot.ts', import.meta.url)), name],
