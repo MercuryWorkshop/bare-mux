@@ -124,6 +124,10 @@ export class BareMuxConnection {
 			client: functionBody,
 		});
 	}
+
+	async getInnerPort(): Promise<MessagePort> {
+		return await this.worker.port;
+	}
 }
 
 export class BareClient {
@@ -132,8 +136,8 @@ export class BareClient {
 	/**
 	 * Create a BareClient. Calls to fetch and connect will wait for an implementation to be ready.
 	 */
-	constructor(workerPath?: string) {
-		this.worker = new WorkerConnection(workerPath);
+	constructor(worker?: string | MessagePort) {
+		this.worker = new WorkerConnection(worker);
 	}
 
 	createWebSocket(

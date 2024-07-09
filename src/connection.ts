@@ -33,8 +33,7 @@ export type WorkerResponse = {
 }
 
 export type BroadcastMessage = {
-	type: "getPath" | "path" | "refreshPort",
-	path?: string,
+	type: "refreshPort",
 }
 
 async function searchForPort(): Promise<MessagePort> {
@@ -59,25 +58,17 @@ function tryGetPort(client: SWClient): Promise<MessagePort> {
 	});
 }
 
-function createPort(path: string, channel: BroadcastChannel, registerHandlers: boolean): MessagePort {
+function createPort(path: string, registerHandlers: boolean): MessagePort {
 	const worker = new SharedWorker(path, "bare-mux-worker");
 	if (registerHandlers) {
-		// uv removes navigator.serviceWorker so this errors
-		if (navigator.serviceWorker) {
-			navigator.serviceWorker.addEventListener("message", event => {
-				if (event.data.type === "getPort" && event.data.port) {
-					console.debug("bare-mux: recieved request for port from sw");
-					const worker = new SharedWorker(path, "bare-mux-worker");
-					event.data.port.postMessage(worker.port, [worker.port]);
-				}
-			});
-		}
-		channel.onmessage = (event: MessageEvent) => {
-			if (event.data.type === "getPath") {
-				console.debug("bare-mux: recieved request for worker path from broadcast channel");
-				channel.postMessage(<BroadcastMessage>{ type: "path", path: path });
+		// @ts-expect-error we are using snapshot.ts
+		serviceWorker.addEventListener("message", (event: MessageEvent) => {
+			if (event.data.type === "getPort" && event.data.port) {
+				console.debug("bare-mux: recieved request for port from sw");
+				const worker = new SharedWorker(path, "bare-mux-worker");
+				event.data.port.postMessage(worker.port, [worker.port]);
 			}
-		};
+		});
 	}
 	return worker.port;
 }
@@ -87,9 +78,13 @@ export class WorkerConnection {
 	port: MessagePort | Promise<MessagePort>;
 	workerPath: string;
 
-	constructor(workerPath?: string) {
+	constructor(worker?: string | MessagePort) {
 		this.channel = new BroadcastChannel("bare-mux");
-		this.createChannel(workerPath, true);
+		if (worker instanceof MessagePort) {
+			this.port = worker;
+		} else {
+			this.createChannel(worker, true);
+		}
 	}
 
 	createChannel(workerPath?: string, inInit?: boolean) {
@@ -108,18 +103,16 @@ export class WorkerConnection {
 			// create the SharedWorker and help other bare-mux clients get the workerPath
 
 			if (!workerPath.startsWith("/") && !workerPath.includes("://")) throw new Error("Invalid URL. Must be absolute or start at the root.");
-			this.port = createPort(workerPath, this.channel, inInit);
+			this.port = createPort(workerPath, inInit);
+			console.debug("bare-mux: setting localStorage bare-mux-path to", workerPath);
+			localStorage["bare-mux-path"] = workerPath;
 		} else if (SharedWorker) {
 			// running in a window, was not passed a workerPath
-			// ask other bare-mux clients for the workerPath
-			this.port = new Promise(resolve => {
-				this.channel.onmessage = (event: MessageEvent) => {
-					if (event.data.type === "path") {
-						resolve(createPort(event.data.path, this.channel, inInit));
-					}
-				}
-				this.channel.postMessage(<BroadcastMessage>{ type: "getPath" });
-			});
+			// use sessionStorage for the workerPath
+			const path = localStorage["bare-mux-path"];
+			console.debug("bare-mux: got localStorage bare-mux-path:", path);
+			if (!path) throw new Error("Unable to get bare-mux workerPath from localStorage.");
+			this.port = createPort(path, inInit);
 		} else {
 			// SharedWorker does not exist
 			throw new Error("Unable to get a channel to the SharedWorker.");

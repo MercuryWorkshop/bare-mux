@@ -7,6 +7,8 @@ export const Request = globalThis.Request;
 export const Response = globalThis.Response;
 export const XMLHttpRequest = globalThis.XMLHttpRequest;
 export const SharedWorker = globalThis.SharedWorker;
+export const localStorage = globalThis.localStorage;
+export const serviceWorker = globalThis.navigator.serviceWorker;
 
 export const WebSocketFields = {
   prototype: {
