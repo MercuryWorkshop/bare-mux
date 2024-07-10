@@ -65,8 +65,8 @@ function createPort(path: string, registerHandlers: boolean): MessagePort {
 		serviceWorker.addEventListener("message", (event: MessageEvent) => {
 			if (event.data.type === "getPort" && event.data.port) {
 				console.debug("bare-mux: recieved request for port from sw");
-				const worker = new SharedWorker(path, "bare-mux-worker");
-				event.data.port.postMessage(worker.port, [worker.port]);
+				const newWorker = new SharedWorker(path, "bare-mux-worker");
+				event.data.port.postMessage(newWorker.port, [newWorker.port]);
 			}
 		});
 	}
