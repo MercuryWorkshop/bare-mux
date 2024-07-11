@@ -30,7 +30,7 @@ const configs = [
 	{
 		input: './src/index.ts',
 		output: {
-			file: 'dist/module.js',
+			file: 'dist/index.mjs',
 			format: 'esm',
 			sourcemap: true,
 			exports: 'named',
