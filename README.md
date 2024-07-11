@@ -1,4 +1,5 @@
 # Bare-Mux
+
 A system for managing http transports in a project such as [Ultraviolet](https://github.com/Titaniumnetwork-dev/Ultraviolet).
 
 Written to make the job of creating new standards for transporting http data seamless.
@@ -33,6 +34,21 @@ export interface BareTransport {
 
   meta: () => BareMeta
 }
+```
+## Upgrading
+
+A guide for updating from v1 to v2 can be found [here](https://github.com/MercuryWorkshop/bare-mux/blob/master/documentation/Upgrading.md).
+
+## Older bare-mux versions
+
+Starting from v2, bare-mux uses [SharedWorkers](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker) to provide stability and improve on resource usage.
+
+If you operate using an older bare-mux, we encourage you to update.
+
+If you're too lazy to do either of the above, you can install an outdated and unsupported version of bare-mux.
+
+```sh
+npm install @mercuryworkshop/bare-mux@1
 ```
 
 Examples of transports include [EpoxyTransport](https://github.com/MercuryWorkshop/EpoxyTransport),  [CurlTransport](https://github.com/MercuryWorkshop/CurlTransport), and [Bare-Client](https://github.com/MercuryWorkshop/Bare-as-module3).
