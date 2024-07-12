@@ -3,7 +3,7 @@
 Some examples of transports are [EpoxyTransport](https://github.com/MercuryWorkshop/EpoxyTransport), [CurlTransport](https://github.com/MercuryWorkshop/CurlTransport), and [Bare-Client](https://github.com/MercuryWorkshop/Bare-as-module3).
 
 ### Hosting files
-Your files should be statically available from your web server. For this example [EpoxyTransport](https://github.com/MercuryWorkshop/EpoxyTransport) will be hosted at `/epoxy/` and [bare-mux](https://github.com/MercuryWorkshop/bare-mux) will be hosted at `/bare-mux/`
+Your files should be statically available from your web server. For this example [EpoxyTransport](https://github.com/MercuryWorkshop/EpoxyTransport) will be hosted at `/epoxy/` and [bare-mux](https://github.com/MercuryWorkshop/bare-mux) will be hosted at `/baremux/`
 
 When using express, all transports and bare-mux provide a path that can be imported into your backend that hosts the static files. An example is shown below.
 ```js
