@@ -39,10 +39,19 @@ export type BroadcastMessage = {
 async function searchForPort(): Promise<MessagePort> {
 	// @ts-expect-error
 	const clients: SWClient[] = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-	const promise: Promise<MessagePort> = Promise.race([...clients.map((x: SWClient) => tryGetPort(x)), new Promise((_, reject) => setTimeout(reject, 1000, new Error("")))]) as Promise<MessagePort>;
+	const promises: Promise<MessagePort>[] = clients.map(async (x: SWClient) => {
+		const port = await tryGetPort(x);
+		await testPort(port);
+		return port;
+	});
+	const promise: Promise<MessagePort> = Promise.race([Promise.any(promises), new Promise((_, reject) => setTimeout(reject, 1000, new TypeError("timeout")))]) as Promise<MessagePort>;
 	try {
 		return await promise;
-	} catch {
+	} catch(err) {
+		if (err instanceof AggregateError) {
+			console.error("bare-mux: failed to get a bare-mux SharedWorker MessagePort as all clients returned an invalid MessagePort.");
+			return;
+		}
 		console.warn("bare-mux: failed to get a bare-mux SharedWorker MessagePort within 1s, retrying");
 		return await searchForPort();
 	}
@@ -56,6 +65,20 @@ function tryGetPort(client: SWClient): Promise<MessagePort> {
 			resolve(event.data)
 		}
 	});
+}
+
+function testPort(port: MessagePort): Promise<void> {
+	const pingChannel = new MessageChannel();
+	const pingPromise: Promise<void> = new Promise((resolve, reject) => {
+		pingChannel.port1.onmessage = event => {
+			if (event.data.type === "pong") {
+				resolve();
+			}
+		};
+		setTimeout(reject, 1500);
+	});
+	port.postMessage(<WorkerRequest>{ message: { type: "ping" }, port: pingChannel.port2 }, [pingChannel.port2]);
+	return pingPromise;
 }
 
 function createPort(path: string, registerHandlers: boolean): MessagePort {
@@ -122,18 +145,8 @@ export class WorkerConnection {
 	async sendMessage(message: WorkerMessage, transferable?: Transferable[]): Promise<WorkerResponse> {
 		if (this.port instanceof Promise) this.port = await this.port;
 
-		const pingChannel = new MessageChannel();
-		const pingPromise: Promise<void> = new Promise((resolve, reject) => {
-			pingChannel.port1.onmessage = event => {
-				if (event.data.type === "pong") {
-					resolve();
-				}
-			};
-			setTimeout(reject, 1500);
-		});
-		this.port.postMessage(<WorkerRequest>{ message: { type: "ping" }, port: pingChannel.port2 }, [pingChannel.port2]);
 		try {
-			await pingPromise;
+			await testPort(this.port);
 		} catch {
 			console.warn("bare-mux: Failed to get a ping response from the worker within 1.5s. Assuming port is dead.");
 			this.createChannel();
