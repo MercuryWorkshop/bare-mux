@@ -1,5 +1,5 @@
-import { BareHeaders, BareTransport, maxRedirects } from './baretypes';
-import { WorkerConnection, WorkerMessage, WorkerResponse } from './connection';
+import { BareHeaders, maxRedirects } from './baretypes';
+import { WorkerConnection, WorkerMessage } from './connection';
 import { WebSocketFields } from './snapshot';
 
 const validChars =
@@ -16,12 +16,6 @@ export function validProtocol(protocol: string): boolean {
 
 	return true;
 }
-
-// get the unhooked value
-const getRealReadyState = Object.getOwnPropertyDescriptor(
-	WebSocket.prototype,
-	'readyState'
-)!.get!;
 
 const wsProtocols = ['ws:', 'wss:'];
 const statusEmpty = [101, 204, 205, 304];
@@ -238,7 +232,7 @@ export class BareClient {
 			}
 		};
 
-		const onclose = (code, reason) => {
+		const onclose = (code: number, reason: string) => {
 			fakeReadyState = WebSocketFields.CLOSED;
 			socket.dispatchEvent(new CloseEvent("close", { code, reason }));
 		};

@@ -8,7 +8,7 @@ export type WorkerMessage = {
 		remote: string,
 		method: string,
 		headers: BareHeaders,
-		body: ReadableStream | undefined,
+		body: ReadableStream | ArrayBuffer | undefined,
 	}
 	websocket?: {
 		url: string,
@@ -94,6 +94,25 @@ function createPort(path: string, registerHandlers: boolean): MessagePort {
 		});
 	}
 	return worker.port;
+}
+
+let browserSupportsTransferringStreamsCache: boolean | null = null;
+export function browserSupportsTransferringStreams(): boolean {
+	if (browserSupportsTransferringStreamsCache === null) {
+		const chan = new MessageChannel();
+		const stream = new ReadableStream();
+		let res: boolean;
+		try {
+			chan.port1.postMessage(stream, [stream]);
+			res = true;
+		} catch(err) {
+			res = false;
+		}
+		browserSupportsTransferringStreamsCache = res;
+		return res;
+	} else {
+		return browserSupportsTransferringStreamsCache;
+	}
 }
 
 export class WorkerConnection {

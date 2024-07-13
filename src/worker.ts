@@ -1,5 +1,5 @@
 import { BareTransport } from "./baretypes";
-import { BroadcastMessage, WorkerMessage, WorkerResponse } from "./connection"
+import { BroadcastMessage, WorkerMessage, WorkerResponse, browserSupportsTransferringStreams } from "./connection"
 
 let currentTransport: BareTransport | null = null;
 let currentTransportName: string = "";
@@ -50,6 +50,11 @@ function handleConnection(port: MessagePort) {
 					message.fetch.headers,
 					null
 				);
+
+				if (!browserSupportsTransferringStreams() && resp.body instanceof ReadableStream) {
+					const conversionResp = new Response(resp.body);
+					resp.body = await conversionResp.arrayBuffer();
+				}
 
 				if (resp.body instanceof ReadableStream || resp.body instanceof ArrayBuffer) {
 					port.postMessage(<WorkerResponse>{ type: "fetch", fetch: resp }, [resp.body]);
