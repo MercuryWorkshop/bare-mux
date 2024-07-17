@@ -25,9 +25,9 @@ function handleConnection(port: MessagePort) {
 				const AsyncFunction = (async function() { }).constructor;
 
 				// @ts-expect-error
-				const func = new AsyncFunction(message.client);
+				const func = new AsyncFunction(message.client.function);
 				const [newTransport, name] = await func();
-				currentTransport = newTransport;
+				currentTransport = new newTransport(...message.client.args);
 				currentTransportName = name;
 				console.log("set transport to ", currentTransport, name);
 

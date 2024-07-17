@@ -105,18 +105,21 @@ export class BareMuxConnection {
 		return (await this.worker.sendMessage({ type: "get" })).name;
 	}
 
-	async setTransport(path: string, options: any[]) {
+	async setTransport(path: string, options: any[], transferables?: Transferable[]) {
 		await this.setManualTransport(`
 			const { default: BareTransport } = await import("${path}");
-			return [new BareTransport(${options.map(x => JSON.stringify(x)).join(", ")}), "${path}"];
-		`);
+			return [BareTransport, "${path}"];
+		`, options, transferables);
 	}
 
-	async setManualTransport(functionBody: string) {
+	async setManualTransport(functionBody: string, options: any[], transferables?: Transferable[]) {
 		await this.worker.sendMessage({
 			type: "set",
-			client: functionBody,
-		});
+			client: {
+				function: functionBody,
+				args: options,
+			},
+		}, transferables);
 	}
 
 	getInnerPort(): MessagePort | Promise<MessagePort> {

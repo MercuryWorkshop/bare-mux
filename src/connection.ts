@@ -17,7 +17,10 @@ export type WorkerMessage = {
 		requestHeaders: BareHeaders,
 		channel: MessagePort,
 	},
-	client?: string,
+	client?: {
+		function: string,
+		args: any[],
+	},
 };
 
 export type WorkerRequest = {
