@@ -1,7 +1,8 @@
 import { BareTransport } from "./baretypes";
-import { BroadcastMessage, WorkerMessage, WorkerResponse, browserSupportsTransferringStreams } from "./connection"
+import { BroadcastMessage, WorkerMessage, WorkerRequest, WorkerResponse } from "./connection"
+import { handleFetch, handleWebsocket, sendError } from "./workerHandlers";
 
-let currentTransport: BareTransport | null = null;
+let currentTransport: BareTransport | MessagePort | null = null;
 let currentTransportName: string = "";
 
 const channel = new BroadcastChannel("bare-mux");
@@ -14,6 +15,14 @@ function noClients(): Error {
 	});
 }
 
+function handleRemoteClient(message: WorkerMessage, port: MessagePort) {
+	const remote = currentTransport as MessagePort;
+	let transferables: Transferable[] = [port];
+	if (message.fetch?.body) transferables.push(message.fetch.body);
+	if (message.websocket?.channel) transferables.push(message.websocket.channel);
+	remote.postMessage(<WorkerRequest>{ message, port }, transferables);
+}
+
 function handleConnection(port: MessagePort) {
 	port.onmessage = async (event: MessageEvent) => {
 		const port = event.data.port;
@@ -24,90 +33,49 @@ function handleConnection(port: MessagePort) {
 			try {
 				const AsyncFunction = (async function() { }).constructor;
 
-				// @ts-expect-error
-				const func = new AsyncFunction(message.client.function);
-				const [newTransport, name] = await func();
-				currentTransport = new newTransport(...message.client.args);
-				currentTransportName = name;
-				console.log("set transport to ", currentTransport, name);
+				if (message.client.function === "bare-mux-remote") {
+					currentTransport = message.client.args[0] as MessagePort;
+					currentTransportName = `bare-mux-remote (${message.client.args[1]})`;
+				} else {
+					// @ts-expect-error
+					const func = new AsyncFunction(message.client.function);
+					const [newTransport, name] = await func();
+					currentTransport = new newTransport(...message.client.args);
+					currentTransportName = name;
+				}
+				console.log("set transport to ", currentTransport, currentTransportName);
 
 				port.postMessage(<WorkerResponse>{ type: "set" });
 			} catch (err) {
-				console.error("error while processing 'set': ", err);
-				port.postMessage(<WorkerResponse>{ type: "error", error: err });
+				sendError(port, err, 'set');
 			}
 		} else if (message.type === "get") {
 			port.postMessage(<WorkerResponse>{ type: "get", name: currentTransportName });
 		} else if (message.type === "fetch") {
 			try {
 				if (!currentTransport) throw noClients();
+				if (currentTransport instanceof MessagePort) {
+					handleRemoteClient(message, port);
+					return;
+				}
 				if (!currentTransport.ready) await currentTransport.init();
 
-				const resp = await currentTransport.request(
-					new URL(message.fetch.remote),
-					message.fetch.method,
-					message.fetch.body,
-					message.fetch.headers,
-					null
-				);
-
-				if (!browserSupportsTransferringStreams() && resp.body instanceof ReadableStream) {
-					const conversionResp = new Response(resp.body);
-					resp.body = await conversionResp.arrayBuffer();
-				}
-
-				if (resp.body instanceof ReadableStream || resp.body instanceof ArrayBuffer) {
-					port.postMessage(<WorkerResponse>{ type: "fetch", fetch: resp }, [resp.body]);
-				} else {
-					port.postMessage(<WorkerResponse>{ type: "fetch", fetch: resp });
-				}
+				await handleFetch(message, port, currentTransport);
 			} catch (err) {
-				console.error("error while processing 'fetch': ", err);
-				port.postMessage(<WorkerResponse>{ type: "error", error: err });
+				sendError(port, err, 'fetch');
 			}
 		} else if (message.type === "websocket") {
 			try {
 				if (!currentTransport) throw noClients();
+				if (currentTransport instanceof MessagePort) {
+					handleRemoteClient(message, port);
+					return;
+				}
 				if (!currentTransport.ready) await currentTransport.init();
 
-				const onopen = (protocol: string) => {
-					message.websocket.channel.postMessage({ type: "open", args: [protocol] });
-				};
-				const onclose = (code: number, reason: string) => {
-					message.websocket.channel.postMessage({ type: "close", args: [code, reason] });
-				};
-				const onerror = (error: string) => {
-					message.websocket.channel.postMessage({ type: "error", args: [error] });
-				};
-				const onmessage = (data: Blob | ArrayBuffer | string) => {
-					if (data instanceof ArrayBuffer) {
-						message.websocket.channel.postMessage({ type: "message", args: [data] }, [data]);
-					} else {
-						message.websocket.channel.postMessage({ type: "message", args: [data] });
-					}
-				}
-				const [data, close] = currentTransport.connect(
-					new URL(message.websocket.url),
-					message.websocket.origin,
-					message.websocket.protocols,
-					message.websocket.requestHeaders,
-					onopen,
-					onmessage,
-					onclose,
-					onerror,
-				);
-				message.websocket.channel.onmessage = (event: MessageEvent) => {
-					if (event.data.type === "data") {
-						data(event.data.data);
-					} else if (event.data.type === "close") {
-						close(event.data.closeCode, event.data.closeReason);
-					}
-				}
-
-				port.postMessage(<WorkerResponse>{ type: "websocket" });
+				await handleWebsocket(message, port, currentTransport);
 			} catch (err) {
-				console.error("error while processing 'websocket': ", err);
-				port.postMessage(<WorkerResponse>{ type: "error", error: err });
+				sendError(port, err, 'websocket');
 			}
 		}
 	}

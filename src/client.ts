@@ -1,6 +1,7 @@
-import { BareHeaders, maxRedirects } from './baretypes';
+import { BareHeaders, BareTransport, maxRedirects } from './baretypes';
 import { WorkerConnection, WorkerMessage } from './connection';
 import { WebSocketFields } from './snapshot';
+import { handleFetch, handleWebsocket, sendError } from './workerHandlers';
 
 const validChars =
 	"!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~";
@@ -113,6 +114,7 @@ export class BareMuxConnection {
 	}
 
 	async setManualTransport(functionBody: string, options: any[], transferables?: Transferable[]) {
+		if (functionBody === "bare-mux-remote") throw new Error("Use setRemoteTransport.");
 		await this.worker.sendMessage({
 			type: "set",
 			client: {
@@ -120,6 +122,39 @@ export class BareMuxConnection {
 				args: options,
 			},
 		}, transferables);
+	}
+
+	async setRemoteTransport(transport: BareTransport, name: string) {
+		const channel = new MessageChannel();
+
+		channel.port1.onmessage = async (event: MessageEvent) => {
+			const port = event.data.port;
+			const message: WorkerMessage = event.data.message;
+
+			if (message.type === "fetch") {
+				try {
+					if (!transport.ready) await transport.init();
+					await handleFetch(message, port, transport);
+				} catch (err) {
+					sendError(port, err, "fetch");
+				}
+			} else if (message.type === "websocket") {
+				try {
+					if (!transport.ready) await transport.init();
+					await handleWebsocket(message, port, transport);
+				} catch (err) {
+					sendError(port, err, "websocket");
+				}
+			}
+		}
+
+		await this.worker.sendMessage({
+			type: "set",
+			client: {
+				function: "bare-mux-remote",
+				args: [channel.port2, name]
+			},
+		}, [channel.port2]);
 	}
 
 	getInnerPort(): MessagePort | Promise<MessagePort> {
