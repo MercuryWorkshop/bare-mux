@@ -18,12 +18,12 @@ app.use("/baremux/", express.static(baremuxPath));
 The newest version of bare-mux uses [SharedWorkers](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker). To initialize bare-mux we have to start a connection. The connection takes the worker path in as a required argument that is needed to proceed with the connection. The 
 ```js
 import { BareMuxConnection } from "@mercuryworkshop/bare-mux"
-let connection = new BareMuxConnection("/baremux/worker.js")
+const connection = new BareMuxConnection("/baremux/worker.js")
 ```
 
 Without using a bundler:
 ```js
-let connection = new BareMux.BareMuxConnection("/baremux/worker.js")
+const connection = new BareMux.BareMuxConnection("/baremux/worker.js")
 ```
 
 ### Setting the transport
@@ -36,5 +36,6 @@ await connection.setTransport("/baremod/index.mjs", ["https://tomp.app/"]);
 
 It is recommended to keep your proxy page in an IFrame of the page with the initialized connection, as sometimes the service worker loses connection and needs to contact the page to get a `MessagePort` back. If your enviroment is not setup like this, it may cause issues.
 
-
 Your transport should get set before the service worker is ready, otherwise this may cause a race condition and the transport may not be used for some requests.
+
+If you are moving from bare-mux v1, you can remove your imports of the transports in the page and service worker as bare-mux v2 streamlines the experience to where imports are loaded inside of the SharedWorker. The only time where bare-mux needs to be imported now is when you are making the connection with `BareMuxConnection`.
