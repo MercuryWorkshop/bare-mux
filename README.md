@@ -61,7 +61,7 @@ const conn = new BareMuxConnection("/bare-mux/worker.js");
 
 // Set Bare-Client transport
 // If your transport is an ES module and exports the class as the default export
-await conn.setTransport("/bare-mux/transport-module.js", ["arg1", "ws://localhost:4000"]);
+await conn.setTransport("/path/to/transport/index.mjs", ["arg1", { wisp: "wss://wisp.mercurywork.shop" }, "arg3"]);
 
 /// As a proxy developer
 import { BareClient } from "@mercuryworkshop/bare-mux";
@@ -70,15 +70,4 @@ const client = new BareClient();
 const resp = await client.fetch("https://example.com");
 // Create websocket
 const ws = client.createWebSocket("wss://echo.websocket.events");
-```
-
-## WebWorker support
-Due to limitations in browsers, there is no way for bare-mux to get a connection to the bare-mux SharedWorker while inside a WebWorker. Proxies that use bare-mux must manually pass in a MessagePort to the SharedWorker to be able to use BareClient in a WebWorker.
-```js
-const connection = new Ultraviolet.BareMuxConnection();
-let port = connection.getInnerPort();
-// this could be a promise, but right now it's only a promise when called inside a service worker
-if (port instanceof Promise) port = await port;
-// ... transfer it to worker ...
-this.bareClient = new BareClient(port)
 ```
