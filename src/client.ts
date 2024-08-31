@@ -98,8 +98,8 @@ export interface BareResponseFetch extends BareResponse {
 export class BareMuxConnection {
 	worker: WorkerConnection;
 
-	constructor(workerPath: string) {
-		this.worker = new WorkerConnection(workerPath);
+	constructor(worker: string | Promise<MessagePort> | MessagePort) {
+		this.worker = new WorkerConnection(worker);
 	}
 
 	async getTransport(): Promise<string> {
@@ -168,7 +168,7 @@ export class BareClient {
 	/**
 	 * Create a BareClient. Calls to fetch and connect will wait for an implementation to be ready.
 	 */
-	constructor(worker?: string | MessagePort) {
+	constructor(worker?: string | Promise<MessagePort> | MessagePort) {
 		this.worker = new WorkerConnection(worker);
 	}
 

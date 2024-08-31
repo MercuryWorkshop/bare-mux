@@ -47,10 +47,14 @@ async function searchForPort(): Promise<MessagePort> {
 		await testPort(port);
 		return port;
 	});
-	const promise: Promise<MessagePort> = Promise.race([Promise.any(promises), new Promise((_, reject) => setTimeout(reject, 1000, new TypeError("timeout")))]) as Promise<MessagePort>;
+	const promise: Promise<MessagePort> = Promise.race([
+		Promise.any(promises),
+		new Promise((_, reject) => setTimeout(reject, 1000, new TypeError("timeout")))
+	]) as Promise<MessagePort>;
+
 	try {
 		return await promise;
-	} catch(err) {
+	} catch (err) {
 		if (err instanceof AggregateError) {
 			console.error("bare-mux: failed to get a bare-mux SharedWorker MessagePort as all clients returned an invalid MessagePort.");
 			throw new Error("All clients returned an invalid MessagePort.");
@@ -108,7 +112,7 @@ export function browserSupportsTransferringStreams(): boolean {
 		try {
 			chan.port1.postMessage(stream, [stream]);
 			res = true;
-		} catch(err) {
+		} catch (err) {
 			res = false;
 		}
 		browserSupportsTransferringStreamsCache = res;
@@ -123,9 +127,9 @@ export class WorkerConnection {
 	port: MessagePort | Promise<MessagePort>;
 	workerPath: string;
 
-	constructor(worker?: string | MessagePort) {
+	constructor(worker?: string | Promise<MessagePort> | MessagePort) {
 		this.channel = new BroadcastChannel("bare-mux");
-		if (worker instanceof MessagePort) {
+		if (worker instanceof MessagePort || worker instanceof Promise) {
 			this.port = worker;
 		} else {
 			this.createChannel(worker, true);
