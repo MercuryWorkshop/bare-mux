@@ -98,7 +98,7 @@ export interface BareResponseFetch extends BareResponse {
 export class BareMuxConnection {
 	worker: WorkerConnection;
 
-	constructor(worker: string | Promise<MessagePort> | MessagePort) {
+	constructor(worker?: string | Promise<MessagePort> | MessagePort) {
 		this.worker = new WorkerConnection(worker);
 	}
 
