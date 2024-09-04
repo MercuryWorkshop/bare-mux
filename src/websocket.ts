@@ -14,10 +14,6 @@ export class BareWebSocket extends EventTarget {
     onmessage = (event: MessageEvent) => {};
     onclose = (event: CloseEvent) => {};
 
-    CONNECTING = WebSocketFields.CONNECTING;
-    OPEN = WebSocketFields.OPEN;
-    CLOSING = WebSocketFields.CLOSING
-    CLOSED = WebSocketFields.CLOSED;
     channel: MessageChannel;
     constructor(
       remote: string | URL,
@@ -33,7 +29,7 @@ export class BareWebSocket extends EventTarget {
       const onopen = (protocol: string) => {
         this.readyState = WebSocketFields.OPEN;
         this.protocols = protocol;
-  
+
         (this as any).meta = {
           headers: {
             "sec-websocket-protocol": protocol,
@@ -45,9 +41,7 @@ export class BareWebSocket extends EventTarget {
       };
   
       const onmessage = async (payload) => {
-        if (typeof payload === "string") {
-          console.log("string strung")
-        } else if ("byteLength" in payload) {
+        if ("byteLength" in payload) {
           if (this.binaryType === "blob") {
             payload = new Blob([payload]);
           } else {
@@ -60,7 +54,7 @@ export class BareWebSocket extends EventTarget {
           }
         }
 
-        let event = new MessageEvent("message", {data: payload });
+        const event = new MessageEvent("message", {data: payload });
         this.dispatchEvent(event);
         this.onmessage(event);
       };
@@ -120,7 +114,7 @@ export class BareWebSocket extends EventTarget {
     }
   
     close(code, reason) {
-      this.readyState = this.CLOSING;
+      this.readyState = WebSocketFields.CLOSING;
       this.channel.port1.postMessage({ type: "close", closeCode: code, closeReason: reason });
     }
   

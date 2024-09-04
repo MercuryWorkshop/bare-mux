@@ -159,8 +159,8 @@ export class BareClient {
 		requestHeaders['Connection'] = 'Upgrade';
 
 		const socket = new BareWebSocket(remote, protocols, this.worker, requestHeaders, arrayBufferImpl)
-		
-		return socket as WebSocket;
+
+		return socket as unknown as WebSocket;
 	}
 
 	async fetch(
