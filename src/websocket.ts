@@ -122,7 +122,11 @@ export class BareWebSocket extends EventTarget {
       return 0;
     }
     get protocol() {
-      return this.protocols[0] || "";
+      if (Array.isArray(this.protocols)) {
+        return this.protocols[0] || "";
+      } else {
+        return this.protocols || "";
+      }
     }
     get extensions() {
       return "";
