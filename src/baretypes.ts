@@ -37,6 +37,7 @@ export interface BareTransport {
 
 	meta: () => BareMeta
 }
+
 export interface BareWebSocketMeta {
 	protocol: string;
 	setCookies: string[];

@@ -1,6 +1,7 @@
 import { BareHeaders, BareTransport, maxRedirects } from './baretypes';
 import { WorkerConnection, WorkerMessage } from './connection';
 import { WebSocketFields } from './snapshot';
+import { BareWebSocket } from './websocket';
 import { handleFetch, handleWebsocket, sendError } from './workerHandlers';
 
 const validChars =
@@ -25,61 +26,6 @@ const statusRedirect = [301, 302, 303, 307, 308];
 export type WebSocketImpl = {
 	new(...args: ConstructorParameters<typeof WebSocket>): WebSocket;
 };
-
-export namespace BareWebSocket {
-	export type GetReadyStateCallback = () => number;
-	export type GetSendErrorCallback = () => Error | undefined;
-	export type GetProtocolCallback = () => string;
-	export type HeadersType = BareHeaders | Headers | undefined;
-	export type HeadersProvider =
-		| BareHeaders
-		| (() => BareHeaders | Promise<BareHeaders>);
-
-	export interface Options {
-		/**
-		 * A provider of request headers to pass to the remote.
-		 * Usually one of `User-Agent`, `Origin`, and `Cookie`
-		 * Can be just the headers object or an synchronous/asynchronous function that returns the headers object
-		 */
-		headers?: BareWebSocket.HeadersProvider;
-		/**
-		 * A hook executed by this function with helper arguments for hooking the readyState property. If a hook isn't provided, bare-client will hook the property on the instance. Hooking it on an instance basis is good for small projects, but ideally the class should be hooked by the user of bare-client.
-		 */
-		readyStateHook?:
-		| ((
-			socket: WebSocket,
-			getReadyState: BareWebSocket.GetReadyStateCallback
-		) => void)
-		| undefined;
-		/**
-		 * A hook executed by this function with helper arguments for determining if the send function should throw an error. If a hook isn't provided, bare-client will hook the function on the instance.
-		 */
-		sendErrorHook?:
-		| ((
-			socket: WebSocket,
-			getSendError: BareWebSocket.GetSendErrorCallback
-		) => void)
-		| undefined;
-		/**
-		 * A hook executed by this function with the URL. If a hook isn't provided, bare-client will hook the URL.
-		 */
-		urlHook?: ((socket: WebSocket, url: URL) => void) | undefined;
-		/**
-		 * A hook executed by this function with a helper for getting the current fake protocol. If a hook isn't provided, bare-client will hook the protocol.
-		 */
-		protocolHook?:
-		| ((
-			socket: WebSocket,
-			getProtocol: BareWebSocket.GetProtocolCallback
-		) => void)
-		| undefined;
-		/**
-		 * A callback executed by this function with an array of cookies. This is called once the metadata from the server is received.
-		 */
-		setCookiesCallback?: ((setCookies: string[]) => void) | undefined;
-		webSocketImpl?: WebSocket;
-	}
-}
 
 /**
  * A Response with additional properties.
@@ -202,32 +148,7 @@ export class BareClient {
 					`Failed to construct 'WebSocket': The subprotocol '${proto}' is invalid.`
 				);
 
-
-		let wsImpl = (webSocketImpl || WebSocket) as WebSocketImpl;
-		const socket = new wsImpl("ws://127.0.0.1:1", protocols);
-
-		let fakeProtocol = '';
-
-		let fakeReadyState: number = WebSocketFields.CONNECTING;
-
-		let initialErrorHappened = false;
-		socket.addEventListener("error", (e) => {
-			if (!initialErrorHappened) {
-				fakeReadyState = WebSocket.CONNECTING;
-				e.stopImmediatePropagation();
-				initialErrorHappened = true;
-			}
-		});
-		let initialCloseHappened = false;
-		socket.addEventListener("close", (e) => {
-			if (!initialCloseHappened) {
-				e.stopImmediatePropagation();
-				initialCloseHappened = true;
-			}
-		});
-		// TODO socket onerror will be broken
-
-		arrayBufferImpl = arrayBufferImpl || wsImpl.constructor.constructor("return ArrayBuffer")().prototype;
+		arrayBufferImpl = arrayBufferImpl || (webSocketImpl || WebSocket).constructor.constructor("return ArrayBuffer")().prototype;
 		requestHeaders = requestHeaders || {};
 		requestHeaders['Host'] = (new URL(remote)).host;
 		// requestHeaders['Origin'] = origin;
@@ -237,132 +158,9 @@ export class BareClient {
 		// requestHeaders['User-Agent'] = navigator.userAgent;
 		requestHeaders['Connection'] = 'Upgrade';
 
-		const onopen = (protocol: string) => {
-			fakeReadyState = WebSocketFields.OPEN;
-			fakeProtocol = protocol;
-
-			(socket as any).meta = {
-				headers: {
-					"sec-websocket-protocol": protocol,
-				}
-			}; // what the fuck is a meta
-			socket.dispatchEvent(new Event("open"));
-		};
-
-		const onmessage = async (payload) => {
-			if (typeof payload === "string") {
-				socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-			} else if ("byteLength" in payload) {
-				if (socket.binaryType === "blob") {
-					payload = new Blob([payload]);
-				} else {
-					Object.setPrototypeOf(payload, arrayBufferImpl);
-				}
-
-				socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-			} else if ("arrayBuffer" in payload) {
-				if (socket.binaryType === "arraybuffer") {
-					payload = await payload.arrayBuffer()
-					Object.setPrototypeOf(payload, arrayBufferImpl);
-				}
-
-				socket.dispatchEvent(new MessageEvent("message", { data: payload }));
-			}
-		};
-
-		const onclose = (code: number, reason: string) => {
-			fakeReadyState = WebSocketFields.CLOSED;
-			socket.dispatchEvent(new CloseEvent("close", { code, reason }));
-		};
-
-		const onerror = () => {
-			fakeReadyState = WebSocketFields.CLOSED;
-			socket.dispatchEvent(new Event("error"))
-		};
-
-		const channel = new MessageChannel();
-
-		channel.port1.onmessage = event => {
-			if (event.data.type === "open") {
-				onopen(event.data.args[0]);
-			} else if (event.data.type === "message") {
-				onmessage(event.data.args[0]);
-			} else if (event.data.type === "close") {
-				onclose(event.data.args[0], event.data.args[1]);
-			} else if (event.data.type === "error") {
-				onerror(/* event.data.args[0] */);
-			}
-		}
-
-		this.worker.sendMessage({
-			type: "websocket",
-			websocket: {
-				url: remote.toString(),
-				origin: origin,
-				protocols: protocols,
-				requestHeaders: requestHeaders,
-				channel: channel.port2,
-			},
-		}, [channel.port2])
-
-		// protocol is always an empty before connecting
-		// updated when we receive the metadata
-		// this value doesn't change when it's CLOSING or CLOSED etc
-		const getReadyState = () => fakeReadyState;
-
-		// we have to hook .readyState ourselves
-
-		Object.defineProperty(socket, 'readyState', {
-			get: getReadyState,
-			configurable: true,
-			enumerable: true,
-		});
-
-		/**
-		 * @returns The error that should be thrown if send() were to be called on this socket according to the fake readyState value
-		 */
-		const getSendError = () => {
-			const readyState = getReadyState();
-
-			if (readyState === WebSocketFields.CONNECTING)
-				return new DOMException(
-					"Failed to execute 'send' on 'WebSocket': Still in CONNECTING state."
-				);
-		};
-
-		// we have to hook .send ourselves
-		// use ...args to avoid giving the number of args a quantity
-		// no arguments will trip the following error: TypeError: Failed to execute 'send' on 'WebSocket': 1 argument required, but only 0 present.
-		socket.send = function(...args) {
-			const error = getSendError();
-
-			if (error) throw error;
-			let data = args[0];
-			// @ts-expect-error
-			if (data.buffer) data = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
-
-			channel.port1.postMessage({ type: "data", data: data }, data instanceof ArrayBuffer ? [data] : []);
-		};
-
-		socket.close = function(code: number, reason: string) {
-			channel.port1.postMessage({ type: "close", closeCode: code, closeReason: reason });
-		}
-
-		Object.defineProperty(socket, 'url', {
-			get: () => remote.toString(),
-			configurable: true,
-			enumerable: true,
-		});
-
-		const getProtocol = () => fakeProtocol;
-
-		Object.defineProperty(socket, 'protocol', {
-			get: getProtocol,
-			configurable: true,
-			enumerable: true,
-		});
-
-		return socket;
+		const socket = new BareWebSocket(remote, protocols, this.worker, requestHeaders, arrayBufferImpl)
+		
+		return socket as WebSocket;
 	}
 
 	async fetch(
