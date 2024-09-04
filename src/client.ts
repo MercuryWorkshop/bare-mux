@@ -338,8 +338,8 @@ export class BareClient {
 
 			if (error) throw error;
 			let data = args[0];
-			// @ts-expect-error idk why it errors?
-			if (data.buffer) data = data.buffer;
+			// @ts-expect-error
+			if (data.buffer) data = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
 
 			channel.port1.postMessage({ type: "data", data: data }, data instanceof ArrayBuffer ? [data] : []);
 		};
