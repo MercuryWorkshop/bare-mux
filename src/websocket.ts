@@ -37,11 +37,14 @@ export class BareWebSocket extends EventTarget {
         };
         const event = new Event("open")
         this.dispatchEvent(event);
-        this.onopen(event);
+        if (this.onopen) {
+          this.onopen(event);
+        }
       };
   
       const onmessage = async (payload) => {
-        if ("byteLength" in payload) {
+        if (typeof payload === "string") {
+        } else if ("byteLength" in payload) {
           if (this.binaryType === "blob") {
             payload = new Blob([payload]);
           } else {
@@ -56,21 +59,27 @@ export class BareWebSocket extends EventTarget {
 
         const event = new MessageEvent("message", {data: payload });
         this.dispatchEvent(event);
-        this.onmessage(event);
+        if (this.onmessage) {
+          this.onmessage(event);
+        }
       };
   
       const onclose = (code: number, reason: string) => {
         this.readyState = WebSocketFields.CLOSED;
         const event = new CloseEvent("close", { code, reason })
         this.dispatchEvent(event);
-        this.onclose(event)
+        if (this.onclose) {
+          this.onclose(event);
+        }
       };
   
       const onerror = () => {
         this.readyState = WebSocketFields.CLOSED;
         const event = new Event("error");
-        this.dispatchEvent(event)
-        this.onerror(event)
+        this.dispatchEvent(event);
+        if (this.onerror) {
+          this.onerror(event);
+        };
       };
   
       this.channel = new MessageChannel();
