@@ -13,11 +13,7 @@ export class BareWebSocket extends EventTarget {
     onerror = null;
     onmessage = null;
     onclose = null;
-
-    CONNECTING = WebSocketFields.CONNECTING;
-    OPEN = WebSocketFields.OPEN;
-    CLOSING = WebSocketFields.CLOSING;
-    CLOSED = WebSocketFields.CLOSED;
+    
     channel: MessageChannel;
     constructor(
       remote: string | URL,
@@ -145,3 +141,12 @@ export class BareWebSocket extends EventTarget {
       return "";
     }
 }
+//@ts-expect-error have to do this
+BareWebSocket.prototype.CONNECTING = WebSocketFields.CONNECTING;
+//@ts-expect-error have to do this
+BareWebSocket.prototype.OPEN = WebSocketFields.OPEN;
+//@ts-expect-error have to do this
+BareWebSocket.prototype.CLOSING = WebSocketFields.CLOSING;
+//@ts-expect-error have to do this
+BareWebSocket.prototype.CLOSED = WebSocketFields.CLOSED;
+
