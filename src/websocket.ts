@@ -5,15 +5,19 @@ import { BareHeaders } from "./baretypes";
 export class BareWebSocket extends EventTarget {
     url: string;
     protocols: string | string[] | undefined = [];
-    readyState: number = WebSocketFields.CONNECTING
+    readyState: number = WebSocketFields.CONNECTING;
     binaryType = "blob";
 
     //legacy event handlers
-    onopen = (event: Event) => {};
-    onerror = (event) => {};
-    onmessage = (event: MessageEvent) => {};
-    onclose = (event: CloseEvent) => {};
+    onopen = null;
+    onerror = null;
+    onmessage = null;
+    onclose = null;
 
+    CONNECTING = WebSocketFields.CONNECTING;
+    OPEN = WebSocketFields.OPEN;
+    CLOSING = WebSocketFields.CLOSING;
+    CLOSED = WebSocketFields.CLOSED;
     channel: MessageChannel;
     constructor(
       remote: string | URL,
