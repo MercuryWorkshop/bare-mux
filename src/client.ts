@@ -121,10 +121,9 @@ export class BareClient {
 	createWebSocket(
 		remote: string | URL,
 		protocols: string | string[] | undefined = [],
-		webSocketImpl?: WebSocketImpl,
+		__deprecated_donotuse_websocket?: any,
 		requestHeaders?: BareHeaders,
-		arrayBufferImpl?: ArrayBuffer,
-	): WebSocket {
+	): BareWebSocket {
 		try {
 			remote = new URL(remote);
 		} catch (err) {
@@ -148,7 +147,6 @@ export class BareClient {
 					`Failed to construct 'WebSocket': The subprotocol '${proto}' is invalid.`
 				);
 
-		arrayBufferImpl = arrayBufferImpl || (webSocketImpl || WebSocket).constructor.constructor("return ArrayBuffer")().prototype;
 		requestHeaders = requestHeaders || {};
 		requestHeaders['Host'] = (new URL(remote)).host;
 		// requestHeaders['Origin'] = origin;
@@ -158,9 +156,9 @@ export class BareClient {
 		// requestHeaders['User-Agent'] = navigator.userAgent;
 		requestHeaders['Connection'] = 'Upgrade';
 
-		const socket = new BareWebSocket(remote, protocols, this.worker, requestHeaders, arrayBufferImpl)
+		const socket = new BareWebSocket(remote, protocols, this.worker, requestHeaders);
 
-		return socket as unknown as WebSocket;
+		return socket;
 	}
 
 	async fetch(
