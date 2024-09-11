@@ -8,3 +8,6 @@ export type * from './baretypes';
 export type * from './client';
 export type * from './connection';
 export type * from "./snapshot";
+
+//@ts-expect-error this gets filled in
+console.debug("bare mux version: " + self.BARE_MUX_VERSION);

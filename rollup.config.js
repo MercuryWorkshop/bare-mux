@@ -1,6 +1,10 @@
 import inject from '@rollup/plugin-inject';
+import replace from '@rollup/plugin-replace';
 import typescript from 'rollup-plugin-typescript2';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+
+const pkg = JSON.parse(await readFile('package.json'));
 
 const commonPlugins = () => [
 	typescript(),
@@ -14,7 +18,11 @@ const commonPlugins = () => [
 			)
 		)
 	),
-
+	replace({
+		'self.BARE_MUX_VERSION': JSON.stringify(
+		  pkg.version
+		),
+	  }),
 ];
 
 const configs = [
