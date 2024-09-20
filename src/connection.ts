@@ -69,7 +69,7 @@ async function searchForPort(): Promise<MessagePort> {
 function tryGetPort(client: SWClient): Promise<MessagePort> {
 	let channel = new MessageChannel();
 	return new Promise(resolve => {
-		realPostMessage.call(client, { type: "getPort", port: channel.port2 }, [channel.port2]);
+		client.postMessage({ type: "getPort", port: channel.port2 }, [channel.port2]);
 		channel.port1.onmessage = event => {
 			resolve(event.data)
 		}
@@ -194,7 +194,7 @@ export class WorkerConnection {
 				}
 			}
 		});
-		realPostMessage.call(this.port, <WorkerRequest>{ message: message, port: channel.port2 }, toTransfer);
+		this.port.postMessage(<WorkerRequest>{ message: message, port: channel.port2 }, toTransfer);
 
 		return await promise;
 	}
