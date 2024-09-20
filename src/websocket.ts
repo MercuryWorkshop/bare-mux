@@ -4,6 +4,7 @@ import { BareHeaders } from "./baretypes";
 
 export class BareWebSocket extends EventTarget {
   url: string;
+  readyState: number = WebSocketFields.CONNECTING;
 
   channel: MessageChannel;
   constructor(
@@ -18,6 +19,7 @@ export class BareWebSocket extends EventTarget {
 
     const onopen = (protocol: string) => {
       this.protocols = protocol;
+      this.readyState = WebSocketFields.OPEN;
 
       const event = new Event("open")
       this.dispatchEvent(event);
@@ -29,11 +31,13 @@ export class BareWebSocket extends EventTarget {
     };
 
     const onclose = (code: number, reason: string) => {
+      this.readyState = WebSocketFields.CLOSED;
       const event = new CloseEvent("close", { code, reason })
       this.dispatchEvent(event);
     };
 
     const onerror = () => {
+      this.readyState = WebSocketFields.CLOSED;
       const event = new Event("error");
       this.dispatchEvent(event);
     };
@@ -66,6 +70,12 @@ export class BareWebSocket extends EventTarget {
   }
 
   send(...args) {
+    if (this.readyState === WebSocketFields.CONNECTING) {
+      throw new DOMException(
+        "Failed to execute 'send' on 'WebSocket': Still in CONNECTING state."
+      );
+    }
+
     let data = args[0];
     if (data.buffer) data = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
 

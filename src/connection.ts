@@ -2,6 +2,8 @@ import { BareHeaders, TransferrableResponse } from "./baretypes";
 
 type SWClient = { postMessage: typeof MessagePort.prototype.postMessage };
 
+const realPostMessage = MessagePort.prototype.postMessage;
+
 export type WorkerMessage = {
 	type: "fetch" | "websocket" | "set" | "get" | "ping",
 	fetch?: {
@@ -67,7 +69,7 @@ async function searchForPort(): Promise<MessagePort> {
 function tryGetPort(client: SWClient): Promise<MessagePort> {
 	let channel = new MessageChannel();
 	return new Promise(resolve => {
-		client.postMessage({ type: "getPort", port: channel.port2 }, [channel.port2]);
+		realPostMessage.call(client, { type: "getPort", port: channel.port2 }, [channel.port2]);
 		channel.port1.onmessage = event => {
 			resolve(event.data)
 		}
@@ -84,7 +86,7 @@ function testPort(port: MessagePort): Promise<void> {
 		};
 		setTimeout(reject, 1500);
 	});
-	port.postMessage(<WorkerRequest>{ message: { type: "ping" }, port: pingChannel.port2 }, [pingChannel.port2]);
+	realPostMessage.call(port, <WorkerRequest>{ message: { type: "ping" }, port: pingChannel.port2 }, [pingChannel.port2]);
 	return pingPromise;
 }
 
@@ -96,7 +98,7 @@ function createPort(path: string, registerHandlers: boolean): MessagePort {
 			if (event.data.type === "getPort" && event.data.port) {
 				console.debug("bare-mux: recieved request for port from sw");
 				const newWorker = new SharedWorker(path, "bare-mux-worker");
-				event.data.port.postMessage(newWorker.port, [newWorker.port]);
+				realPostMessage.call(event.data.port, newWorker.port, [newWorker.port]);
 			}
 		});
 	}
@@ -110,7 +112,7 @@ export function browserSupportsTransferringStreams(): boolean {
 		const stream = new ReadableStream();
 		let res: boolean;
 		try {
-			chan.port1.postMessage(stream, [stream]);
+			realPostMessage.call(chan.port1, stream, [stream]);
 			res = true;
 		} catch (err) {
 			res = false;
@@ -192,7 +194,7 @@ export class WorkerConnection {
 				}
 			}
 		});
-		this.port.postMessage(<WorkerRequest>{ message: message, port: channel.port2 }, toTransfer);
+		realPostMessage.call(this.port, <WorkerRequest>{ message: message, port: channel.port2 }, toTransfer);
 
 		return await promise;
 	}
