@@ -11,4 +11,4 @@ export type * from './connection';
 export type * from "./snapshot";
 
 //@ts-expect-error this gets filled in
-console.debug("bare mux version: " + self.BARE_MUX_VERSION);
+console.debug(`bare-mux: running v${self.BARE_MUX_VERSION}`);
