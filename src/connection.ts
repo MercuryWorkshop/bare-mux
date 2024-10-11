@@ -68,7 +68,7 @@ async function searchForPort(): Promise<MessagePort> {
 function tryGetPort(client: SWClient): Promise<MessagePort> {
 	let channel = new MessageChannel();
 	return new Promise(resolve => {
-		nativePostMessage.call(client, { type: "getPort", port: channel.port2 }, [channel.port2]);
+		client.postMessage({ type: "getPort", port: channel.port2 }, [channel.port2]);
 		channel.port1.onmessage = event => {
 			resolve(event.data)
 		}
