@@ -1,6 +1,6 @@
 {
 	"name": "@mercuryworkshop/bare-mux",
-	"version": "2.0.9",
+	"version": "2.1.0",
 	"description": "",
 	"type": "module",
 	"scripts": {
@@ -26,7 +26,7 @@
 		}
 	},
 	"devDependencies": {
-		"@rollup/plugin-inject": "^5.0.5",
+		"@rollup/plugin-terser": "^0.4.4",
 		"@rollup/plugin-replace": "^5.0.5",
 		"rollup": "^4.9.6",
 		"rollup-plugin-typescript2": "^0.36.0"
