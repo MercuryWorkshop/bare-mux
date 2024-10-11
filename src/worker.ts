@@ -86,3 +86,6 @@ function handleConnection(port: MessagePort) {
 self.onconnect = (event: MessageEvent) => {
 	handleConnection(event.ports[0])
 }
+
+//@ts-expect-error this gets filled in
+console.debug(`bare-mux: running v${self.BARE_MUX_VERSION}`);
