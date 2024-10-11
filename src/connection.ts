@@ -1,5 +1,5 @@
 import { BareHeaders, TransferrableResponse } from "./baretypes";
-import { nativeLocalStorage, nativePostMessage, nativeServiceWorker } from "./snapshot";
+import { nativeLocalStorage, nativePostMessage, nativeServiceWorker, nativeSharedWorker } from "./snapshot";
 
 type SWClient = { postMessage: typeof MessagePort.prototype.postMessage };
 
@@ -68,7 +68,7 @@ async function searchForPort(): Promise<MessagePort> {
 function tryGetPort(client: SWClient): Promise<MessagePort> {
 	let channel = new MessageChannel();
 	return new Promise(resolve => {
-		client.postMessage({ type: "getPort", port: channel.port2 }, [channel.port2]);
+		nativePostMessage.call(client, { type: "getPort", port: channel.port2 }, [channel.port2]);
 		channel.port1.onmessage = event => {
 			resolve(event.data)
 		}
@@ -90,12 +90,12 @@ function testPort(port: MessagePort): Promise<void> {
 }
 
 function createPort(path: string, registerHandlers: boolean): MessagePort {
-	const worker = new SharedWorker(path, "bare-mux-worker");
+	const worker = new nativeSharedWorker(path, "bare-mux-worker");
 	if (registerHandlers) {
 		nativeServiceWorker.addEventListener("message", (event: MessageEvent) => {
 			if (event.data.type === "getPort" && event.data.port) {
 				console.debug("bare-mux: recieved request for port from sw");
-				const newWorker = new SharedWorker(path, "bare-mux-worker");
+				const newWorker = new nativeSharedWorker(path, "bare-mux-worker");
 				nativePostMessage.call(event.data.port, newWorker.port, [newWorker.port]);
 			}
 		});
