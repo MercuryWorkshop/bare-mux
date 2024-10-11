@@ -1,6 +1,7 @@
 import { BareTransport } from "./baretypes";
-import { BroadcastMessage, WorkerMessage, WorkerRequest, WorkerResponse } from "./connection"
+import { BroadcastMessage, WorkerMessage, WorkerRequest, WorkerResponse } from "./connection";
 import { handleFetch, handleWebsocket, sendError } from "./workerHandlers";
+import { nativePostMessage } from "./snapshot";
 
 let currentTransport: BareTransport | MessagePort | null = null;
 let currentTransportName: string = "";
@@ -20,7 +21,7 @@ function handleRemoteClient(message: WorkerMessage, port: MessagePort) {
 	let transferables: Transferable[] = [port];
 	if (message.fetch?.body) transferables.push(message.fetch.body);
 	if (message.websocket?.channel) transferables.push(message.websocket.channel);
-	remote.postMessage(<WorkerRequest>{ message, port }, transferables);
+	nativePostMessage.call(remote, <WorkerRequest>{ message, port }, transferables);
 }
 
 function handleConnection(port: MessagePort) {
@@ -28,7 +29,7 @@ function handleConnection(port: MessagePort) {
 		const port = event.data.port;
 		const message: WorkerMessage = event.data.message;
 		if (message.type === "ping") {
-			port.postMessage(<WorkerResponse>{ type: "pong" });
+			nativePostMessage.call(port, (<WorkerResponse>{ type: "pong" }));
 		} else if (message.type === "set") {
 			try {
 				const AsyncFunction = (async function() { }).constructor;
@@ -45,7 +46,7 @@ function handleConnection(port: MessagePort) {
 				}
 				console.log("set transport to ", currentTransport, currentTransportName);
 
-				port.postMessage(<WorkerResponse>{ type: "set" });
+				nativePostMessage.call(port, <WorkerResponse>{ type: "set" });
 			} catch (err) {
 				sendError(port, err, 'set');
 			}

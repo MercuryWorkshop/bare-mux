@@ -1,14 +1,9 @@
-// The user likely has overwritten all networking functions after importing bare-client
-// It is our responsibility to make sure components of Bare-Client are using native networking functions
-
-export const fetch = globalThis.fetch;
-export const WebSocket = globalThis.WebSocket;
-export const Request = globalThis.Request;
-export const Response = globalThis.Response;
-export const XMLHttpRequest = globalThis.XMLHttpRequest;
-export const SharedWorker = globalThis.SharedWorker;
-export const localStorage = globalThis.localStorage;
-export const serviceWorker = globalThis.navigator.serviceWorker;
+export const nativeFetch = globalThis.fetch;
+export const nativeWebSocket = globalThis.WebSocket;
+export const nativeSharedWorker = globalThis.SharedWorker;
+export const nativeLocalStorage = globalThis.localStorage;
+export const nativeServiceWorker = globalThis.navigator.serviceWorker;
+export const nativePostMessage = MessagePort.prototype.postMessage;
 
 export const WebSocketFields = {
   prototype: {

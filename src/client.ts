@@ -1,6 +1,6 @@
 import { BareHeaders, BareTransport, maxRedirects } from './baretypes';
 import { WorkerConnection, WorkerMessage } from './connection';
-import { WebSocketFields } from './snapshot';
+import { nativeFetch } from './snapshot';
 import { BareWebSocket } from './websocket';
 import { handleFetch, handleWebsocket, sendError } from './workerHandlers';
 
@@ -22,10 +22,6 @@ export function validProtocol(protocol: string): boolean {
 const wsProtocols = ['ws:', 'wss:'];
 const statusEmpty = [101, 204, 205, 304];
 const statusRedirect = [301, 302, 303, 307, 308];
-
-export type WebSocketImpl = {
-	new(...args: ConstructorParameters<typeof WebSocket>): WebSocket;
-};
 
 /**
  * A Response with additional properties.
@@ -183,7 +179,7 @@ export class BareClient {
 		let urlO = new URL(req.url);
 
 		if (urlO.protocol.startsWith('blob:')) {
-			const response = await fetch(urlO);
+			const response = await nativeFetch(urlO);
 			const result: Response & Partial<BareResponse> = new Response(
 				response.body,
 				response

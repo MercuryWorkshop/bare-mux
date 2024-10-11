@@ -1,5 +1,5 @@
 import type { WorkerConnection } from "./connection";
-import { WebSocketFields } from "./snapshot";
+import { WebSocketFields, nativePostMessage } from "./snapshot";
 import { BareHeaders } from "./baretypes";
 
 export class BareWebSocket extends EventTarget {
@@ -79,10 +79,10 @@ export class BareWebSocket extends EventTarget {
     let data = args[0];
     if (data.buffer) data = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
 
-    this.channel.port1.postMessage({ type: "data", data: data }, data instanceof ArrayBuffer ? [data] : []);
+    nativePostMessage.call(this.channel.port1, { type: "data", data: data }, data instanceof ArrayBuffer ? [data] : []);
   }
 
   close(code, reason) {
-    this.channel.port1.postMessage({ type: "close", closeCode: code, closeReason: reason });
+    nativePostMessage.call(this.channel.port1, { type: "close", closeCode: code, closeReason: reason });
   }
 }

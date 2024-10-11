@@ -1,8 +1,7 @@
 import { BareHeaders, TransferrableResponse } from "./baretypes";
+import { nativeLocalStorage, nativePostMessage, nativeServiceWorker } from "./snapshot";
 
 type SWClient = { postMessage: typeof MessagePort.prototype.postMessage };
-
-const realPostMessage = MessagePort.prototype.postMessage;
 
 export type WorkerMessage = {
 	type: "fetch" | "websocket" | "set" | "get" | "ping",
@@ -86,19 +85,18 @@ function testPort(port: MessagePort): Promise<void> {
 		};
 		setTimeout(reject, 1500);
 	});
-	realPostMessage.call(port, <WorkerRequest>{ message: { type: "ping" }, port: pingChannel.port2 }, [pingChannel.port2]);
+	nativePostMessage.call(port, <WorkerRequest>{ message: { type: "ping" }, port: pingChannel.port2 }, [pingChannel.port2]);
 	return pingPromise;
 }
 
 function createPort(path: string, registerHandlers: boolean): MessagePort {
 	const worker = new SharedWorker(path, "bare-mux-worker");
 	if (registerHandlers) {
-		// @ts-expect-error we are using snapshot.ts
-		serviceWorker.addEventListener("message", (event: MessageEvent) => {
+		nativeServiceWorker.addEventListener("message", (event: MessageEvent) => {
 			if (event.data.type === "getPort" && event.data.port) {
 				console.debug("bare-mux: recieved request for port from sw");
 				const newWorker = new SharedWorker(path, "bare-mux-worker");
-				realPostMessage.call(event.data.port, newWorker.port, [newWorker.port]);
+				nativePostMessage.call(event.data.port, newWorker.port, [newWorker.port]);
 			}
 		});
 	}
@@ -112,7 +110,7 @@ export function browserSupportsTransferringStreams(): boolean {
 		const stream = new ReadableStream();
 		let res: boolean;
 		try {
-			realPostMessage.call(chan.port1, stream, [stream]);
+			nativePostMessage.call(chan.port1, stream, [stream]);
 			res = true;
 		} catch (err) {
 			res = false;
@@ -156,11 +154,11 @@ export class WorkerConnection {
 			if (!workerPath.startsWith("/") && !workerPath.includes("://")) throw new Error("Invalid URL. Must be absolute or start at the root.");
 			this.port = createPort(workerPath, inInit);
 			console.debug("bare-mux: setting localStorage bare-mux-path to", workerPath);
-			localStorage["bare-mux-path"] = workerPath;
+			nativeLocalStorage["bare-mux-path"] = workerPath;
 		} else if (SharedWorker) {
 			// running in a window, was not passed a workerPath
 			// use sessionStorage for the workerPath
-			const path = localStorage["bare-mux-path"];
+			const path = nativeLocalStorage["bare-mux-path"];
 			console.debug("bare-mux: got localStorage bare-mux-path:", path);
 			if (!path) throw new Error("Unable to get bare-mux workerPath from localStorage.");
 			this.port = createPort(path, inInit);
@@ -194,7 +192,8 @@ export class WorkerConnection {
 				}
 			}
 		});
-		this.port.postMessage(<WorkerRequest>{ message: message, port: channel.port2 }, toTransfer);
+
+		nativePostMessage.call(this.port, <WorkerRequest>{ message: message, port: channel.port2 }, toTransfer);
 
 		return await promise;
 	}

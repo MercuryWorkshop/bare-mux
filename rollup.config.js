@@ -8,16 +8,6 @@ const pkg = JSON.parse(await readFile('package.json'));
 
 const commonPlugins = () => [
 	typescript(),
-	inject(
-		Object.fromEntries(
-			['fetch', 'Request', 'Response', 'WebSocket', 'XMLHttpRequest', 'SharedWorker', 'localStorage', 'serviceWorker'].map(
-				(name) => [
-					name,
-					[fileURLToPath(new URL('./src/snapshot.ts', import.meta.url)), name],
-				]
-			)
-		)
-	),
 	replace({
 		'self.BARE_MUX_VERSION': JSON.stringify(
 		  pkg.version

@@ -1,5 +1,6 @@
 import { BareTransport } from "./baretypes";
 import { browserSupportsTransferringStreams, WorkerMessage, WorkerResponse } from "./connection";
+import { nativePostMessage } from "./snapshot";
 
 export function sendError(port: MessagePort, err: Error, name: string) {
 	console.error(`error while processing '${name}': `, err);
@@ -21,27 +22,27 @@ export async function handleFetch(message: WorkerMessage, port: MessagePort, tra
 	}
 
 	if (resp.body instanceof ReadableStream || resp.body instanceof ArrayBuffer) {
-		port.postMessage(<WorkerResponse>{ type: "fetch", fetch: resp }, [resp.body]);
+		nativePostMessage.call(port, <WorkerResponse>{ type: "fetch", fetch: resp }, [resp.body]);
 	} else {
-		port.postMessage(<WorkerResponse>{ type: "fetch", fetch: resp });
+		nativePostMessage.call(port, <WorkerResponse>{ type: "fetch", fetch: resp });
 	}
 }
 
 export async function handleWebsocket(message: WorkerMessage, port: MessagePort, transport: BareTransport) {
 	const onopen = (protocol: string) => {
-		message.websocket.channel.postMessage({ type: "open", args: [protocol] });
+		nativePostMessage.call(message.websocket.channel, { type: "open", args: [protocol] });
 	};
 	const onclose = (code: number, reason: string) => {
-		message.websocket.channel.postMessage({ type: "close", args: [code, reason] });
+		nativePostMessage.call(message.websocket.channel, { type: "close", args: [code, reason] });
 	};
 	const onerror = (error: string) => {
-		message.websocket.channel.postMessage({ type: "error", args: [error] });
+		nativePostMessage.call(message.websocket.channel, { type: "error", args: [error] });
 	};
 	const onmessage = (data: Blob | ArrayBuffer | string) => {
 		if (data instanceof ArrayBuffer) {
-			message.websocket.channel.postMessage({ type: "message", args: [data] }, [data]);
+			nativePostMessage.call(message.websocket.channel, { type: "message", args: [data] }, [data]);
 		} else {
-			message.websocket.channel.postMessage({ type: "message", args: [data] });
+			nativePostMessage.call(message.websocket.channel, { type: "message", args: [data] });
 		}
 	}
 	const [data, close] = transport.connect(
@@ -62,5 +63,5 @@ export async function handleWebsocket(message: WorkerMessage, port: MessagePort,
 		}
 	}
 
-	port.postMessage(<WorkerResponse>{ type: "websocket" });
+	nativePostMessage.call(port, <WorkerResponse>{ type: "websocket" });
 }
