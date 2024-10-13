@@ -1,6 +1,8 @@
 import replace from '@rollup/plugin-replace';
 import terser from '@rollup/plugin-terser';
 import typescript from 'rollup-plugin-typescript2';
+
+import { execSync } from "node:child_process";
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -13,8 +15,20 @@ const commonPlugins = () => [
 		'self.BARE_MUX_VERSION': JSON.stringify(
 		  pkg.version
 		),
-	  }),
+		'self.BARE_MUX_COMMITHASH': (() => {
+			try {
+				let hash = JSON.stringify(
+					execSync("git rev-parse --short HEAD", {
+						encoding: "utf-8",
+					}).replace(/\r?\n|\r/g, "")
+				);
 
+				return hash;
+			} catch (e) {
+				return "unknown";
+			}
+		})(),
+	}),
 ];
 
 const configs = [

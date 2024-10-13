@@ -88,4 +88,4 @@ self.onconnect = (event: MessageEvent) => {
 }
 
 //@ts-expect-error this gets filled in
-console.debug(`bare-mux: running v${self.BARE_MUX_VERSION}`);
+console.debug(`bare-mux: running v${self.BARE_MUX_VERSION} (build ${self.BARE_MUX_COMMITHASH})`);
