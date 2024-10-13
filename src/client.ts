@@ -144,13 +144,6 @@ export class BareClient {
 				);
 
 		requestHeaders = requestHeaders || {};
-		requestHeaders['Host'] = (new URL(remote)).host;
-		// requestHeaders['Origin'] = origin;
-		requestHeaders['Pragma'] = 'no-cache';
-		requestHeaders['Cache-Control'] = 'no-cache';
-		requestHeaders['Upgrade'] = 'websocket';
-		// requestHeaders['User-Agent'] = navigator.userAgent;
-		requestHeaders['Connection'] = 'Upgrade';
 
 		const socket = new BareWebSocket(remote, protocols, this.worker, requestHeaders);
 
