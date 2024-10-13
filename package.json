@@ -1,12 +1,12 @@
 {
 	"name": "@mercuryworkshop/bare-mux",
-	"version": "2.1.2",
+	"version": "2.1.3",
 	"description": "",
 	"type": "module",
 	"scripts": {
 		"build": "rollup -c",
 		"watch": "rollup -cw",
-		"prepare": "npm run build"
+		"prepack": "npm run build"
 	},
 	"author": "",
 	"files": [
