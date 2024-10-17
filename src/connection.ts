@@ -13,7 +13,6 @@ export type WorkerMessage = {
 	}
 	websocket?: {
 		url: string,
-		origin: string,
 		protocols: string[],
 		requestHeaders: BareHeaders,
 		channel: MessagePort,

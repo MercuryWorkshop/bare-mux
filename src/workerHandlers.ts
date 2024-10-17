@@ -47,7 +47,6 @@ export async function handleWebsocket(message: WorkerMessage, port: MessagePort,
 	}
 	const [data, close] = transport.connect(
 		new URL(message.websocket.url),
-		message.websocket.origin,
 		message.websocket.protocols,
 		message.websocket.requestHeaders,
 		onopen,

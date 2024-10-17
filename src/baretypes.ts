@@ -18,7 +18,6 @@ export interface BareTransport {
 	ready: boolean;
 	connect: (
 		url: URL,
-		origin: string,
 		protocols: string[],
 		requestHeaders: BareHeaders,
 		onopen: (protocol: string) => void,

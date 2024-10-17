@@ -60,7 +60,6 @@ export class BareWebSocket extends EventTarget {
       type: "websocket",
       websocket: {
         url: remote.toString(),
-        origin: origin,
         //@ts-expect-error
         protocols: protocols,
         requestHeaders: requestHeaders,
