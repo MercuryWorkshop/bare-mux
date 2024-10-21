@@ -6,11 +6,11 @@ export const nativeServiceWorker = globalThis.navigator.serviceWorker;
 export const nativePostMessage = MessagePort.prototype.postMessage;
 
 export const WebSocketFields = {
-  prototype: {
-    send: WebSocket.prototype.send,
-  },
-  CLOSED: WebSocket.CLOSED,
-  CLOSING: WebSocket.CLOSING,
-  CONNECTING: WebSocket.CONNECTING,
-  OPEN: WebSocket.OPEN,
+	prototype: {
+		send: WebSocket.prototype.send,
+	},
+	CLOSED: WebSocket.CLOSED,
+	CLOSING: WebSocket.CLOSING,
+	CONNECTING: WebSocket.CONNECTING,
+	OPEN: WebSocket.OPEN,
 };

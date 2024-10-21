@@ -185,9 +185,6 @@ export class BareClient {
 		}
 
 		for (let i = 0; ; i++) {
-			if ('host' in headers) headers.host = urlO.host;
-			else headers.Host = urlO.host;
-
 			let resp = (await this.worker.sendMessage(<WorkerMessage>{
 				type: "fetch",
 				fetch: {
@@ -204,7 +201,6 @@ export class BareClient {
 				status: resp.status,
 				statusText: resp.statusText,
 			}) as BareResponse;
-			responseobj.rawHeaders = resp.headers;
 			responseobj.rawResponse = new Response(resp.body);
 
 
