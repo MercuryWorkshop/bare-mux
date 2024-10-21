@@ -201,8 +201,7 @@ export class BareClient {
 				status: resp.status,
 				statusText: resp.statusText,
 			}) as BareResponse;
-			responseobj.rawResponse = new Response(resp.body);
-
+			responseobj.rawHeaders = resp.headers;
 
 			responseobj.finalURL = urlO.toString();
 
