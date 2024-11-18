@@ -1,4 +1,4 @@
-import { BareHeaders, BareTransport, maxRedirects } from './baretypes';
+import { BareHeaders, BareTransport, maxRedirects, TransferrableResponse } from './baretypes';
 import { WorkerConnection, WorkerMessage } from './connection';
 import { nativeFetch } from './snapshot';
 import { BareWebSocket } from './websocket';
@@ -27,7 +27,7 @@ const statusRedirect = [301, 302, 303, 307, 308];
  * A Response with additional properties.
  */
 export interface BareResponse extends Response {
-	rawResponse: Response;
+	rawResponse: TransferrableResponse;
 	rawHeaders: BareHeaders;
 }
 /**
@@ -179,7 +179,6 @@ export class BareClient {
 			);
 
 			result.rawHeaders = Object.fromEntries(response.headers as any);
-			result.rawResponse = response;
 
 			return result as BareResponseFetch;
 		}
@@ -202,7 +201,7 @@ export class BareClient {
 				statusText: resp.statusText,
 			}) as BareResponse;
 			responseobj.rawHeaders = resp.headers;
-
+			responseobj.rawResponse = resp;
 			responseobj.finalURL = urlO.toString();
 
 			const redirect = init?.redirect || req.redirect;
