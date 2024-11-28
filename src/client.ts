@@ -173,13 +173,20 @@ export class BareClient {
 
 		if (urlO.protocol.startsWith('blob:')) {
 			const response = await nativeFetch(urlO);
-			const result: Response & Partial<BareResponse> = new Response(
+			const result: Response & Partial<BareResponseFetch> = new Response(
 				response.body,
 				response
 			);
 
 			result.rawHeaders = Object.fromEntries(response.headers as any);
-
+			result.rawResponse = {
+				body: response.body,
+				headers: Object.fromEntries(response.headers as any),
+				status: response.status,
+				statusText: response.statusText,
+			};
+			result.finalURL = urlO.toString();
+			
 			return result as BareResponseFetch;
 		}
 
