@@ -12,7 +12,7 @@ channel.postMessage(<BroadcastMessage>{ type: "refreshPort" });
 function noClients(): Error {
 	// @ts-expect-error mdn error constructor: new Error(message, options)
 	return new Error("there are no bare clients", {
-		cause: "No BareTransport was set. Try creating a BareMuxConnection and calling setTransport() or setManualTransport() on it before using BareClient."
+		cause: "No BareTransport was set. Try creating a BareMuxConnection and calling `setTransport()` or `setManualTransport()` on it before using BareClient."
 	});
 }
 
@@ -38,11 +38,16 @@ function handleConnection(port: MessagePort) {
 					currentTransport = message.client.args[0] as MessagePort;
 					currentTransportName = `bare-mux-remote (${message.client.args[1]})`;
 				} else {
-					// @ts-expect-error
-					const func = new AsyncFunction(message.client.function);
-					const [newTransport, name] = await func();
-					currentTransport = new newTransport(...message.client.args);
-					currentTransportName = name;
+					try {
+						// @ts-expect-error
+						const func = new AsyncFunction(message.client.function);
+						const [newTransport, name] = await func();
+						currentTransport = new newTransport(...message.client.args);
+						currentTransportName = name;
+					} catch (err) {
+						err.cause = "The BareTransport provided was invalid. Common causes of this are a default export that is not a class that implements BareTransport if you are using `setTransport()`";
+						throw err;
+					}
 				}
 				console.log("set transport to ", currentTransport, currentTransportName);
 
