@@ -89,12 +89,18 @@ function testPort(port: MessagePort): Promise<void> {
 }
 
 function createPort(path: string, registerHandlers: boolean): MessagePort {
-	const worker = new nativeSharedWorker(path, "bare-mux-worker");
+	const worker = new nativeSharedWorker(path, {
+		name: "bare-mux-worker",
+		extendedLifetime: true
+	});
 	if (registerHandlers) {
 		nativeServiceWorker.addEventListener("message", (event: MessageEvent) => {
 			if (event.data.type === "getPort" && event.data.port) {
 				console.debug("bare-mux: recieved request for port from sw");
-				const newWorker = new nativeSharedWorker(path, "bare-mux-worker");
+				const newWorker = new nativeSharedWorker(path, {
+					name: "bare-mux-worker",
+					extendedLifetime: true
+				});
 				nativePostMessage.call(event.data.port, newWorker.port, [newWorker.port]);
 			}
 		});
