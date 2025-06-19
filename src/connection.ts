@@ -91,6 +91,7 @@ function testPort(port: MessagePort): Promise<void> {
 function createPort(path: string, registerHandlers: boolean): MessagePort {
 	const worker = new nativeSharedWorker(path, {
 		name: "bare-mux-worker",
+		//@ts-expect-error not typed
 		extendedLifetime: true
 	});
 	if (registerHandlers) {
@@ -99,6 +100,7 @@ function createPort(path: string, registerHandlers: boolean): MessagePort {
 				console.debug("bare-mux: recieved request for port from sw");
 				const newWorker = new nativeSharedWorker(path, {
 					name: "bare-mux-worker",
+					//@ts-expect-error not typed
 					extendedLifetime: true
 				});
 				nativePostMessage.call(event.data.port, newWorker.port, [newWorker.port]);
