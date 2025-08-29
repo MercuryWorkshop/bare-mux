@@ -150,7 +150,7 @@ export class WorkerConnection {
 			// running in a window, was passed a workerPath
 			// create the SharedWorker and help other bare-mux clients get the workerPath
 
-			if (!workerPath.startsWith("/") && !workerPath.includes("://")) throw new Error("Invalid URL. Must be absolute or start at the root.");
+			if (!workerPath.startsWith("/") && !workerPath.includes(":")) throw new Error("Invalid URL. Must be absolute or start at the root.");
 			this.port = createPort(workerPath, inInit);
 			console.debug("bare-mux: setting localStorage bare-mux-path to", workerPath);
 			nativeLocalStorage["bare-mux-path"] = workerPath;
