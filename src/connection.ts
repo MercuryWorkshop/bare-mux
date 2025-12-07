@@ -56,8 +56,13 @@ async function searchForPort(): Promise<MessagePort> {
 		return await promise;
 	} catch (err) {
 		if (err instanceof AggregateError) {
-			console.error("bare-mux: failed to get a bare-mux SharedWorker MessagePort as all clients returned an invalid MessagePort.");
-			throw new Error("All clients returned an invalid MessagePort.");
+			const message = `All clients returned an invalid MessagePort (${e.message})
+${e.errors.map((e, i) => `Client ${i + 1}: ${e instanceof Error ? e.message : String(e)}`).join("\n")}`;
+			console.error(
+				"bare-mux: failed to get a bare-mux SharedWorker MessagePort:",
+				message,
+			);
+			throw new Error(message);
 		}
 		console.warn("bare-mux: failed to get a bare-mux SharedWorker MessagePort within 1s, retrying");
 		return await searchForPort();
