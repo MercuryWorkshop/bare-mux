@@ -1,4 +1,6 @@
 # bare-mux
+**this is deprecated and will no longer be recieving updates, please use [proxy-transports](https://github.com/MercuryWorkshop/proxy-transports) instead**
+
 <a href="https://www.npmjs.com/package/@mercuryworkshop/bare-mux"><img src="https://img.shields.io/npm/v/@mercuryworkshop/bare-mux.svg?maxAge=3600" alt="npm version" /></a>
 
 A system for managing http transports in a project such as [Ultraviolet](https://github.com/Titaniumnetwork-dev/Ultraviolet) and [Scramjet](https://github.com/MercuryWorkshop/Scramjet).
