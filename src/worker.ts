@@ -10,7 +10,6 @@ const channel = new BroadcastChannel("bare-mux");
 channel.postMessage(<BroadcastMessage>{ type: "refreshPort" });
 
 function noClients(): Error {
-	// @ts-expect-error mdn error constructor: new Error(message, options)
 	return new Error("there are no bare clients", {
 		cause: "No BareTransport was set. Try creating a BareMuxConnection and calling `setTransport()` or `setManualTransport()` on it before using BareClient."
 	});
